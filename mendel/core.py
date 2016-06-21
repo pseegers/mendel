@@ -9,7 +9,7 @@ import urllib2
 import requests
 from debian import deb822
 
-from fabric.colors import red, green, magenta, blue, yellow
+from fabric.colors import red, green, magenta, blue
 from fabric.context_managers import cd, lcd, hide
 from fabric.contrib import files
 from fabric.operations import sudo, local, run, prompt, put
@@ -108,6 +108,8 @@ class Mendel(object):
             nexus_port=None,
             nexus_repository=None,
             graphite_host=None,
+            track_event_endpoint=None,
+            api_service_name=None,
             **kwargs
     ):
 
@@ -130,6 +132,9 @@ class Mendel(object):
         self._nexus_repository = nexus_repository or config.NEXUS_REPOSITORY
 
         self._graphite_host = graphite_host or config.GRAPHITE_HOST
+        self._track_event_endpoint = track_event_endpoint or config.TRACK_EVENT_ENDPOINT
+
+        self._api_service_name = api_service_name or config.API_SERVICE_NAME
 
         # Hack -- Who needs polymorphism anyways?
         #
@@ -665,6 +670,10 @@ class Mendel(object):
         sudo('tail -f /var/log/%s/%s' % (self._service_name, log_name), user=self._user, group=self._group)
 
     def _track_event(self, event):
+        self._track_event_graphite(event)
+        self._track_event_api(event)
+
+    def _track_event_graphite(self, event):
         """
         Track who deployed what service and what the release dir is to Graphite's events UI
         """
@@ -685,6 +694,27 @@ class Mendel(object):
         if r.code != 200:
             print red('Unable to track deployment event in graphite (HTTP %s)' % r.code)
 
+    def _track_event_api(self, event):
+        """
+        Track who deployed what service and what the release dir is to an external REST API
+        """
+        if not self._track_event_endpoint:
+            print red('Unable to track deployment event in custom api, no api endpoint configured in ~/.mendel.conf')
+            return
+
+        data = {
+            'service': self._api_service_name or self._service_name,
+            'host': env.host_string,
+            'deployer': getpass.getuser(),
+            'event': event
+        }
+
+        url = 'http://%s' % self._track_event_endpoint
+
+        r = requests.post(url, data)
+        if r.status_code != 200:
+            print red('Unable to track deployment event to the external API (HTTP %s)' % r.status_code)
+
     def get_tasks(self):
         return [
             WrappedCallableTask(lcd_task(task, self._cwd))
@@ -700,4 +730,3 @@ class Mendel(object):
                 self.link_latest_release
             ]
         ]
-
