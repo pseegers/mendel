@@ -11,7 +11,6 @@ from mendel.core import Mendel
 from mendel.util import create_host_task
 from mendel.util import ConfigMissingError
 from mendel.util import load_mendel_config
-from mendel.version import __version__
 
 
 env.colorize_errors = True

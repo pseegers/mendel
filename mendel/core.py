@@ -108,7 +108,6 @@ class Mendel(object):
             nexus_port=None,
             nexus_repository=None,
             graphite_host=None,
-            track_event_endpoint=None,
             api_service_name=None,
             **kwargs
     ):
@@ -122,6 +121,7 @@ class Mendel(object):
         self._project_type = project_type or 'java'
         self._cwd = cwd or '.'
         self._jar_name = jar_name or service_name
+        self._api_service_name = api_service_name
 
         self._version_control = "hg" if os.path.exists(".hg") else "git"
         self._release_dir = None
@@ -132,9 +132,7 @@ class Mendel(object):
         self._nexus_repository = nexus_repository or config.NEXUS_REPOSITORY
 
         self._graphite_host = graphite_host or config.GRAPHITE_HOST
-        self._track_event_endpoint = track_event_endpoint or config.TRACK_EVENT_ENDPOINT
-
-        self._api_service_name = api_service_name or config.API_SERVICE_NAME
+        self._track_event_endpoint = config.TRACK_EVENT_ENDPOINT
 
         # Hack -- Who needs polymorphism anyways?
         #
