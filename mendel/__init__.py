@@ -48,10 +48,12 @@ def init(service_name=None, bundle_type=None, project_type=None):
     else:
         build_target_path = 'target/%s' % service_name
 
-    project_type = project_type or raw_input('enter project_type type (java) [java]: ') or 'java'
+    project_type = project_type or raw_input('enter project_type type (java, python) [java]: ') or 'java'
     if project_type != 'java':
-        red('if you want project_type %s, issue a pull request.' % project_type)
-        sys.exit(1)
+        if bundle_type != 'tgz':
+            if project_type != 'python':
+                red('if you want project_type %s, issue a pull request.' % project_type)
+                sys.exit(1)
 
     conf = OrderedDict()
     conf['service_name'] = service_name
