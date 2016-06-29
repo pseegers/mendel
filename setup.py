@@ -28,7 +28,7 @@ install_reqs = parse_requirements(reqs_file, session=uuid.uuid1())
 
 
 setup(
-    name='mendel',
+    name='fabric-mendel',
     install_requires=[str(ir.req) for ir in install_reqs],
     version=__version__, # comes from execfile() invocation above; IDEs will complain.
     description='Fabric Tooling for deploying services',
