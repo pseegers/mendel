@@ -49,11 +49,12 @@ def init(service_name=None, bundle_type=None, project_type=None):
         build_target_path = 'target/%s' % service_name
 
     project_type = project_type or raw_input('enter project_type type (java, python) [java]: ') or 'java'
-    if project_type != 'java':
-        if bundle_type != 'tgz':
-            if project_type != 'python':
-                red('if you want project_type %s, issue a pull request.' % project_type)
-                sys.exit(1)
+    if project_type not in ('java', 'python'):
+        red('if you want project_type %s, issue a pull request.' % bundle_type)
+        sys.exit(1)
+    if project_type == 'python' and bundle_type != 'tgz':
+        red('if you want project_type {} to use {}, issue a pull request.'.format(project_type, bundle_type))
+        sys.exit(1)
 
     conf = OrderedDict()
     conf['service_name'] = service_name

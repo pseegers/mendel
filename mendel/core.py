@@ -138,14 +138,9 @@ class Mendel(object):
         # will probably want a builder delegate and a deployer delegate
         # because cross products
         if bundle_type == 'tgz':
-            if project_type == 'python':
-                self._install = self._install_tgz
-                self._upload = self._upload_tgz
-                self._rollback = self._symlink_rollback
-            else:
-                self._install = self._install_tgz
-                self._upload = self._upload_tgz
-                self._rollback = self._symlink_rollback
+            self._install = self._install_tgz
+            self._upload = self._upload_tgz
+            self._rollback = self._symlink_rollback
         elif bundle_type == 'deb':
             self._install = self._install_deb
             self._upload = self._upload_deb
@@ -370,6 +365,7 @@ class Mendel(object):
         with cd(self._rpath('releases', release_dir)):
             # so we can delete it after extraction
             sudo('chown %s:%s %s' % (self._user, self._group, bundle_file))
+            
             sudo('tar --strip-components 1 -zxvf %(bf)s && rm %(bf)s' % {'bf': bundle_file}, user=self._user, group=self._group)
 
             if self._project_type == 'java':
@@ -378,9 +374,9 @@ class Mendel(object):
             
             elif self._project_type == 'python':
                 # fabric commands are each issued in their own shell so the virtual env needs to be activated each time
-                # pip had issues with wheel cache permissions which were solved wit hthe --no-cache flag
+                # pip had issues with wheel cache permissions which were solved with the --no-cache flag
                 # the requires.txt is used instead of setup.py install because we don't need the code installed as a module
-                #   but we still need to the requirements isntalled, this way we dont have to find a requirements.txt file
+                #   but we still need to the requirements installed, this way we dont have to find a requirements.txt file
                 #   in the rest of the application b/c setup.py sdist puts it in the egg-info
                 sudo('source /srv/{srv_name}/env/bin/activate && pip install --no-cache -r {rel_dir}/{srv_name}.egg-info/requires.txt'
                         .format(srv_name=self._service_name, rel_dir=self._rpath('releases', release_dir)),
@@ -605,6 +601,8 @@ class Mendel(object):
             if self._project_type == "python":
                 if self._bundle_type == "tgz":
                     local('python setup.py sdist')
+                else:
+                    raise Exception("Unsupported bundle type: {} for project type: {}".format(self._bundle_type, self._project_type))
             else:
                 raise Exception("Unsupported project type: %s" % self._project_type)
             self._mark_as_built()
