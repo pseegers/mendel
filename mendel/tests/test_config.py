@@ -49,5 +49,5 @@ class TestConfigParsing(TestCase):
         self.assertEqual(config.NEXUS_HOST, None)
         self.assertEqual(config.NEXUS_PORT, 0)
         self.assertEqual(config.NEXUS_REPOSITORY, None)
+        self.assertEqual(config.GRAPHITE_HOST, None)
         self.assertEqual(config.TRACK_EVENT_ENDPOINT, 'api.int.mycompany.com/track/')
-        self.assertEqual(config.API_SERVICE_NAME, 'test_name')
