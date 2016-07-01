@@ -42,3 +42,12 @@ class TestConfigParsing(TestCase):
         self.assertEqual(config.NEXUS_REPOSITORY, None)
         self.assertEqual(config.GRAPHITE_HOST, 'graphite.int.mycompany.com')
 
+    def test_track_event_endpoint_options(self):
+        self._set_config_file('track_event_configured.conf')
+        config = Config()
+        self.assertEqual(config.NEXUS_USER, None)
+        self.assertEqual(config.NEXUS_HOST, None)
+        self.assertEqual(config.NEXUS_PORT, 0)
+        self.assertEqual(config.NEXUS_REPOSITORY, None)
+        self.assertEqual(config.GRAPHITE_HOST, None)
+        self.assertEqual(config.TRACK_EVENT_ENDPOINT, 'api.int.mycompany.com/track/')

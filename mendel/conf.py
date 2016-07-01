@@ -37,3 +37,4 @@ class Config(object):
         self.NEXUS_PORT = int(os.environ.get('MENDEL_NEXUS_PORT', self._parser.getint_or('nexus', 'port', 0)))
         self.NEXUS_REPOSITORY = os.environ.get('MENDEL_NEXUS_REPOSITORY', self._parser.get_or('nexus', 'repository'))
         self.GRAPHITE_HOST = os.environ.get('MENDEL_GRAPHITE_HOST', self._parser.get_or('graphite', 'host'))
+        self.TRACK_EVENT_ENDPOINT = os.environ.get('TRACK_EVENT_ENDPOINT', self._parser.get_or('api', 'track_event'))

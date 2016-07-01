@@ -78,6 +78,7 @@ def lcd_task(task, cd_to):
     func.__doc__ = task.__doc__
     return func
 
+
 class ConfigMissingError(Exception):
     """
     raised when mendel configuration is missing or malformed
