@@ -368,9 +368,27 @@ class Mendel(object):
         with cd(self._rpath('releases', release_dir)):
             # so we can delete it after extraction
             sudo('chown %s:%s %s' % (self._user, self._group, bundle_file))
+            
             sudo('tar --strip-components 1 -zxvf %(bf)s && rm %(bf)s' % {'bf': bundle_file}, user=self._user, group=self._group)
-            sudo('ln -sf *.jar %s.jar' % self._service_name, user=self._user, group=self._group)
-            self._change_symlink_to(self._rpath('releases', release_dir))
+
+            if self._project_type == 'java':
+                sudo('ln -sf *.jar %s.jar' % self._service_name, user=self._user, group=self._group)
+                self._change_symlink_to(self._rpath('releases', release_dir))
+            
+            elif self._project_type == 'python':
+                # fabric commands are each issued in their own shell so the virtual env needs to be activated each time
+                # pip had issues with wheel cache permissions which were solved with the --no-cache flag
+                # the requires.txt is used instead of setup.py install because we don't need the code installed as a module
+                #   but we still need to the requirements installed, this way we dont have to find a requirements.txt file
+                #   in the rest of the application b/c setup.py sdist puts it in the egg-info
+                sudo('source /srv/{srv_name}/env/bin/activate && pip install --no-cache -r {rel_dir}/{srv_name}.egg-info/requires.txt'
+                        .format(srv_name=self._service_name, rel_dir=self._rpath('releases', release_dir)),
+                        user=self._user,
+                        group=self._group)
+                # need to get the top level application directory but not the egg-info directory or other setup files
+                project_dir = sudo("find . -maxdepth 1 -mindepth 1 -type d -not -regex '.*egg-info$'")
+                project_dir = project_dir[2:]  # find command returns a string like './dir'
+                self._change_symlink_to(self._rpath('releases', release_dir, project_dir))
 
     def _install_jar(self, jar_name):
         release_dir = self._new_release_dir()
@@ -583,6 +601,11 @@ class Mendel(object):
         if not self._is_already_built():
             if self._project_type == "java":
                 local('mvn clean -U package')
+            if self._project_type == "python":
+                if self._bundle_type == "tgz":
+                    local('python setup.py sdist')
+                else:
+                    raise Exception("Unsupported bundle type: {} for project type: {}".format(self._bundle_type, self._project_type))
             else:
                 raise Exception("Unsupported project type: %s" % self._project_type)
             self._mark_as_built()
