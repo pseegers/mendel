@@ -601,7 +601,7 @@ class Mendel(object):
         if not self._is_already_built():
             if self._project_type == "java":
                 local('mvn clean -U package')
-            if self._project_type == "python":
+            elif self._project_type == "python":
                 if self._bundle_type == "tgz":
                     local('python setup.py sdist')
                 else:
