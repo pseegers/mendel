@@ -109,6 +109,8 @@ class Mendel(object):
             nexus_repository=None,
             graphite_host=None,
             api_service_name=None,
+            slack_url=None,
+            slack_emoji=":rocket:",
             **kwargs
     ):
 
@@ -132,6 +134,8 @@ class Mendel(object):
         self._nexus_repository = nexus_repository or config.NEXUS_REPOSITORY
 
         self._graphite_host = graphite_host or config.GRAPHITE_HOST
+        self._slack_url = slack_url
+        self._slack_emoji = slack_emoji
         self._track_event_endpoint = config.TRACK_EVENT_ENDPOINT
 
         # Hack -- Who needs polymorphism anyways?
@@ -693,6 +697,7 @@ class Mendel(object):
     def _track_event(self, event):
         self._track_event_graphite(event)
         self._track_event_api(event)
+        self._track_event_slack(event)
 
     def _track_event_graphite(self, event):
         """
@@ -735,6 +740,23 @@ class Mendel(object):
         r = requests.post(url, data)
         if r.status_code != 200:
             print red('Unable to track deployment event to the external API (HTTP %s)' % r.status_code)
+
+    def _track_event_slack(self, event):
+        """
+        Notify Slack that a mendel event has taken place
+        """
+        service_name = self._api_service_name or self._service_name
+        text = '%s %s %s on host %s' % (getpass.getuser(), event, service_name, env.host_string)
+        if self._slack_url is not None:
+            params = {
+                'username': 'Mendel',
+                'text': text,
+                'icon_emoji': self._slack_emoji
+            }
+            req = urllib2.Request(self._slack_url, json.dumps(params))
+            urllib2.urlopen(req)
+        else:
+            print 'No slack_url found skipping slack notification: [%s]' % text
 
     def get_tasks(self):
         return [
