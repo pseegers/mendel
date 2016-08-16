@@ -18,6 +18,7 @@ from fabric.tasks import WrappedCallableTask
 
 from mendel.conf import Config
 from mendel.util import lcd_task
+from mendel.util import str_to_bool
 
 config = Config()
 
@@ -111,6 +112,7 @@ class Mendel(object):
             api_service_name=None,
             slack_url=None,
             slack_emoji=":rocket:",
+            use_upstart=True,
             **kwargs
     ):
 
@@ -137,6 +139,10 @@ class Mendel(object):
         self._slack_url = slack_url
         self._slack_emoji = slack_emoji
         self._track_event_endpoint = config.TRACK_EVENT_ENDPOINT
+        if isinstance(use_upstart, basestring):
+            self._use_upstart = str_to_bool(use_upstart)
+        else:
+            self._use_upstart = use_upstart
 
         # Hack -- Who needs polymorphism anyways?
         #
@@ -318,10 +324,11 @@ class Mendel(object):
         return 'start/running' in result
 
     def _start_or_restart(self):
-        if self._is_running():
-            self.upstart('restart')
-        else:
-            self.upstart('start')
+        if self._use_upstart:
+            if self._is_running():
+                self.upstart('restart')
+            else:
+                self.upstart('start')
 
     def _missing_hosts(self):
         return not bool(env.hosts)
