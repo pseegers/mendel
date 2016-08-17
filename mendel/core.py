@@ -752,8 +752,7 @@ class Mendel(object):
         """
         Notify Slack that a mendel event has taken place
         """
-        service_name = self._api_service_name or self._service_name
-        text = '%s %s %s on host %s' % (getpass.getuser(), event, service_name, env.host_string)
+        text = "%s %s %s @ %s to host(s) %s" % (getpass.getuser(), event, self._service_name, self._get_commit_hash(), env.host_string)
         if self._slack_url is not None:
             params = {
                 'username': 'Mendel',
