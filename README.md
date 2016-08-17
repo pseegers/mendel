@@ -165,6 +165,20 @@ Use `sprout_java` in Chef. In other words:
    `/srv/service-name/current`
 3. Make sure your service's logs are set to go to `/var/log/service-name/`, or make sure your log4j.properties file puts them into `/srv/service-name` or really anywhere besides in the root of your classpath because each deployment will move a symlink.
 
+Testing
+---------------------------
+Please make sure all tests pass and new tests are added to cover your additions
+After installing installing the requirements:
+```
+pip install -r requirements.txt
+```
+You can run the tests using nose:
+```
+coverage erase
+nosetests --cover-package=mendel --with-coverage
+coverage report
+```
+
 Future
 ------
 

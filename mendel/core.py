@@ -18,6 +18,7 @@ from fabric.tasks import WrappedCallableTask
 
 from mendel.conf import Config
 from mendel.util import lcd_task
+from mendel.util import str_to_bool
 
 config = Config()
 
@@ -109,6 +110,9 @@ class Mendel(object):
             nexus_repository=None,
             graphite_host=None,
             api_service_name=None,
+            slack_url=None,
+            slack_emoji=":rocket:",
+            use_upstart=True,
             **kwargs
     ):
 
@@ -132,7 +136,13 @@ class Mendel(object):
         self._nexus_repository = nexus_repository or config.NEXUS_REPOSITORY
 
         self._graphite_host = graphite_host or config.GRAPHITE_HOST
+        self._slack_url = slack_url
+        self._slack_emoji = slack_emoji
         self._track_event_endpoint = config.TRACK_EVENT_ENDPOINT
+        if isinstance(use_upstart, basestring):
+            self._use_upstart = str_to_bool(use_upstart)
+        else:
+            self._use_upstart = use_upstart
 
         # Hack -- Who needs polymorphism anyways?
         #
@@ -314,10 +324,11 @@ class Mendel(object):
         return 'start/running' in result
 
     def _start_or_restart(self):
-        if self._is_running():
-            self.upstart('restart')
-        else:
-            self.upstart('start')
+        if self._use_upstart:
+            if self._is_running():
+                self.upstart('restart')
+            else:
+                self.upstart('start')
 
     def _missing_hosts(self):
         return not bool(env.hosts)
@@ -693,6 +704,7 @@ class Mendel(object):
     def _track_event(self, event):
         self._track_event_graphite(event)
         self._track_event_api(event)
+        self._track_event_slack(event)
 
     def _track_event_graphite(self, event):
         """
@@ -735,6 +747,22 @@ class Mendel(object):
         r = requests.post(url, data)
         if r.status_code != 200:
             print red('Unable to track deployment event to the external API (HTTP %s)' % r.status_code)
+
+    def _track_event_slack(self, event):
+        """
+        Notify Slack that a mendel event has taken place
+        """
+        text = "%s %s %s @ %s to host(s) %s" % (getpass.getuser(), event, self._service_name, self._get_commit_hash(), env.host_string)
+        if self._slack_url is not None:
+            params = {
+                'username': 'Mendel',
+                'text': text,
+                'icon_emoji': self._slack_emoji
+            }
+            req = urllib2.Request(self._slack_url, json.dumps(params))
+            urllib2.urlopen(req)
+        else:
+            print 'No slack_url found skipping slack notification: [%s]' % text
 
     def get_tasks(self):
         return [
