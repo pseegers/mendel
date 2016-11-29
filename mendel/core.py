@@ -199,9 +199,12 @@ class Mendel(object):
     def _tpath(self, *args):
         return os.path.join('/tmp', *args)
 
+    def shell_quote(self, s):
+        return "'" + s.replace("'", "'\\''") + "'"
+
     def _create_if_missing(self, path):
         if not files.exists(path):
-            sudo('mkdir -p %s' % path, user=self._user, group=self._group)
+            sudo('mkdir -p %s' % self.shell_quote(path), user=self._user, group=self._group)
 
     def _change_symlink_to(self, release_path):
         print blue("Linking release %s into current" % release_path)
