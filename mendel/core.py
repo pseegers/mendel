@@ -194,7 +194,7 @@ class Mendel(object):
         return os.path.join(self._cwd, *args)
 
     def _rpath(self, *args):
-        return os.path.join(self._service_root, *args)
+        return self.shell_quote(os.path.join(self._service_root, *args))
 
     def _tpath(self, *args):
         return os.path.join('/tmp', *args)
@@ -204,7 +204,7 @@ class Mendel(object):
 
     def _create_if_missing(self, path):
         if not files.exists(path):
-            sudo('mkdir -p %s' % self.shell_quote(path), user=self._user, group=self._group)
+            sudo('mkdir -p %s' % path, user=self._user, group=self._group)
 
     def _change_symlink_to(self, release_path):
         print blue("Linking release %s into current" % release_path)
