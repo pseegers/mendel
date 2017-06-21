@@ -180,8 +180,8 @@ class Mendel(object):
             tasks = inspect.getmembers(self, predicate=inspect.ismethod)
             print red("Invalid task name: %s"% task_name)
             print
-            print "Please choose one of" 
-            print 
+            print "Please choose one of"
+            print
             for task, _ in tasks:
                 if not task.startswith("_"):
                     print "\t" + task
@@ -257,7 +257,8 @@ class Mendel(object):
         try:
             with lcd(self._lpath(self._build_target_path)):
                 if self._bundle_type == "tgz":
-                    r = local('ls *.tar.gz', capture=True)
+                    # Get most recently touched tarball
+                    r = local('ls -1t *.tar.gz | head -1', capture=True)
                 elif self._bundle_type == "deb":
                     r = local('ls *.deb', capture=True)
                 elif self._bundle_type == "jar":
@@ -382,13 +383,13 @@ class Mendel(object):
         with cd(self._rpath('releases', release_dir)):
             # so we can delete it after extraction
             sudo('chown %s:%s %s' % (self._user, self._group, bundle_file))
-            
+
             sudo('tar --strip-components 1 -zxvf %(bf)s && rm %(bf)s' % {'bf': bundle_file}, user=self._user, group=self._group)
 
             if self._project_type == 'java':
                 sudo('ln -sf *.jar %s.jar' % self._service_name, user=self._user, group=self._group)
                 self._change_symlink_to(self._rpath('releases', release_dir))
-            
+
             elif self._project_type == 'python':
                 # fabric commands are each issued in their own shell so the virtual env needs to be activated each time
                 # pip had issues with wheel cache permissions which were solved with the --no-cache flag
@@ -416,8 +417,8 @@ class Mendel(object):
 
         [advanced]\t
 
-        dpkg likes to blow away your old files when 
-        you make new ones. this is a hack to keep them 
+        dpkg likes to blow away your old files when
+        you make new ones. this is a hack to keep them
         around
         """
         current_release = self._rpath('releases', self._get_current_release()).rstrip('/')
@@ -604,9 +605,10 @@ class Mendel(object):
 
     def build(self):
         """
-        [advanced]\tbuilds new application bundle for your service using maven
-        expects the output to be a .tar.gz application bundle containing all
-        required files for a service. it is highly recommended that you use the
+        [advanced]\tbuilds new application bundle for your service using maven (if java)
+        or setup.py (if python).
+
+        if using java, it is highly recommended that you use the
         maven-assembly-plugin as a standard, it makes bundling files together into
         archives straightforward.
 
