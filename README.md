@@ -21,7 +21,7 @@ get it!
 **mendel** is available in pypi. You'll likely want to install **mendel** globally:
 
 ```
-sudo pip install fabric-mendel
+sudo pip install mendel
 ```
 
 synopsis
