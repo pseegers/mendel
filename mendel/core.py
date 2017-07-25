@@ -194,13 +194,10 @@ class Mendel(object):
         return os.path.join(self._cwd, *args)
 
     def _rpath(self, *args):
-        return self.shell_quote(os.path.join(self._service_root, *args))
+        return os.path.join(self._service_root, *args)
 
     def _tpath(self, *args):
         return os.path.join('/tmp', *args)
-
-    def shell_quote(self, s):
-        return "'" + s.replace("'", "'\\''") + "'"
 
     def _create_if_missing(self, path):
         if not files.exists(path):
