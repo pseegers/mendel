@@ -5,3 +5,6 @@ build/
 *.pyc
 .vagrant/
 *.egg
+*.iml
+.idea/
+target/
