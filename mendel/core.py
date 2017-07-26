@@ -9,7 +9,7 @@ import urllib2
 import requests
 from debian import deb822
 
-from fabric.colors import red, green, magenta, blue
+from fabric.colors import red, green, magenta, blue, cyan
 from fabric.context_managers import cd, lcd, hide
 from fabric.contrib import files
 from fabric.operations import sudo, local, run, prompt, put
@@ -721,13 +721,14 @@ class Mendel(object):
         user = getpass.getuser()
         what = '%s %s %s on host %s' % (user, event, self._service_name, env.host_string)
         data = ''
-        tag_strs = (self._service_name, event)
-        tags = ' '.join(tuple(str(_) for _ in tag_strs))
+        tags = [str(s) for s in (self._service_name, event)]
 
         data = {'what': what, 'tags': tags, 'data': data}
         r = urllib2.urlopen(url, json.dumps(data))
         if r.code != 200:
             print red('Unable to track deployment event in graphite (HTTP %s)' % r.code)
+        else:
+            print cyan('Tracked deploy in graphite (data=%s' % json.dumps(data))
 
     def _track_event_api(self, event):
         """
