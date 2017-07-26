@@ -8,3 +8,6 @@ build/
 *.iml
 .idea/
 target/
+.eggs/
+.tox/
+.cache/

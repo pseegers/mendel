@@ -43,4 +43,6 @@ setup(
     zip_safe=False,
     license='MIT',
     test_suite='mendel.tests',
+    setup_requires=['pytest-runner', ],
+    tests_require=['pytest', ],
 )
