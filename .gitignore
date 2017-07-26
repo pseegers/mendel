@@ -1,4 +1,4 @@
-
+.venv
 dist/
 build/
 *.egg-info
@@ -8,3 +8,6 @@ build/
 *.iml
 .idea/
 target/
+.eggs/
+.tox/
+.cache/

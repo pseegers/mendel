@@ -10,6 +10,7 @@ from fabric.api import task
 from mendel.core import Mendel
 from mendel.util import create_host_task
 from mendel.util import ConfigMissingError
+from mendel.util import is_running_tests
 from mendel.util import load_mendel_config
 
 
@@ -68,7 +69,7 @@ def init(service_name=None, bundle_type=None, project_type=None):
     # other misc stuff to get LWRP-type env
 
 
-if 'python -m unittest' not in sys.argv and 'setup.py' not in sys.argv:
+if not is_running_tests():
     ############################################################################
     # must be outside of a main block to work, happens upon import of this file
     # cuz fabric is magic.

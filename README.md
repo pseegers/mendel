@@ -165,21 +165,26 @@ Use `sprout_java` in Chef. In other words:
    `/srv/service-name/current`
 3. Make sure your service's logs are set to go to `/var/log/service-name/`, or make sure your log4j.properties file puts them into `/srv/service-name` or really anywhere besides in the root of your classpath because each deployment will move a symlink.
 
-Testing
+Developing Mendel, Making changes
 ---------------------------
-Please make sure all tests pass and new tests are added to cover your additions
-After installing installing the requirements:
-```
-pip install -r requirements.txt
-```
-You can run the tests using nose:
-```
-coverage erase
-nosetests --cover-package=mendel --with-coverage
-coverage report
-```
+Please make sure all tests pass and new tests are added to cover your additions.
 
-Future
+There are both unit and full end-to-end integration tests. You must have docker installed.
+
+After cloning this repo and creating a virtualenv and activating it, run these commands:
+
+```
+make init
+make test
+```
+that will install the required `requirements.txt` and then run all of the tests,
+including the integration test that:
+
+1. spins up a docker container
+2. deploys an example service to it
+3. curls the example service to make sure deployment worked
+
+Future?
 ------
 
 * java service maven archetype(s) that sets people up for success!
@@ -189,5 +194,7 @@ Future
 
 Open Questions
 --------------
+**NOTE: these were written a longgggg time ago. Docker and kubernetes probably changes the future world of deployment a lot, but we're not there yet. I doubt anybody read this far :)**
+
 * How do we handle services that have data that persists across deployments, for example, tailers have lastReadFiles. Simplest solution is to just assume that application state lives in `/srv/service_name`, which means local developers need to make those directories probably, as would CI/jenkins..nbd tho I don't think. The Linux convention according to [Linux Filesystem Hierarchy Version 0.65](http://tldp.org/LDP/Linux-Filesystem-Hierarchy/html/Linux-Filesystem-Hierarchy.html) is `/var/lib/service_name`. [Spotify](https://github.com/spotify/helios/blob/master/src/deb/helios-master/postinst) follows the Linux Filesystem Hierarchy convention it seems, and they also are using [jdeb](https://github.com/tcurdt/jdeb) to pacakge their services in to debian packages.
 * There arguably is a need for decoupling deployment from building, insofar as sometimes, you are simply provisioning additional server resources to horizontally scale an existing service, and no new builds are required -- in this event, you want to be able to deploy the *exact* same release to the newly provisioned servers as is running on existing services. Amazon S3 is a natural choice for this, as would potentially be Archiva (but seems more painful). Ideally we would write a pure-python S3 implementation to avoid having to install a python s3 pip package in order to run the fab file. My thought on approach to this is that during the *install* phase of deployment, instead of just putting the application bundle directly on the server, place it into S3 first, and redownload it to the local machine, and *then* ship it over. That way we avoid having to create some sort of "deploy agent" that runs on all of our servers. Or maybe it is possible to wget the archive from S3 through fabric w/o needing. Then we would have all revisions available in a central location for installing to newly provisioned hardware.

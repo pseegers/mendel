@@ -121,3 +121,19 @@ def str_to_bool(val):
     else:
         raise ValueError("invalid truth value %r" % (val,))
 
+
+def is_running_tests():
+    """
+    Apply heuristics against the list of arguments of whatever __main__
+    is, so we can avoid quitting due to a lack of mendel.yml when
+    the unittests are being run.
+    :return: bool
+    """
+    test_heuristics = ['python -m unittest', 'setup.py', 'utrunner.py']
+
+    running_tests = False
+    for arg in sys.argv:
+        if any(test_heuristic in arg for test_heuristic in test_heuristics):
+            running_tests = True
+            break
+    return running_tests
