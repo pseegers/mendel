@@ -13,8 +13,9 @@ release: test
 	# if tag fails, that means we're trying to build
 	# a version that already exists
 	git tag $(version)
-	git push origin $(version)
 	python setup.py sdist upload -r sprout
+	# dont push tag til successfully uploaded to pypi
+	git push origin $(version)
 
 clean:
 	rm -rf ./dist/
