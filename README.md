@@ -20,8 +20,17 @@ get it!
 -------
 **mendel** is available in pypi. You'll likely want to install **mendel** globally:
 
+##### install
 ```
-sudo pip install mendel
+sudo pip install fabric-mendel==0.6.10
+```
+
+##### configure deployment tracking
+create a `~/.mendel.conf` file in your `$HOME`. inside, add the following:
+
+```
+[graphite]
+host=yourgraphitehostname
 ```
 
 synopsis
