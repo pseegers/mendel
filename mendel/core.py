@@ -327,7 +327,8 @@ class Mendel(object):
     def _start_or_restart(self):
         if self._use_upstart:
             if self._is_running():
-                self.upstart('restart')
+                self.upstart('stop')
+                self.upstart('start')
             else:
                 self.upstart('start')
 
