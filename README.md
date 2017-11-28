@@ -184,6 +184,7 @@ After cloning this repo and creating a virtualenv and activating it, run these c
 
 ```
 make init
+python setup.py develop
 make test
 ```
 that will install the required `requirements.txt` and then run all of the tests,
