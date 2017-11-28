@@ -3,7 +3,7 @@ from subprocess import Popen
 from unittest import TestCase
 import os
 import urllib2
-
+import fabric
 import time
 
 
@@ -26,17 +26,37 @@ class IntegrationTests(TestCase):
         curdir = os.path.dirname(os.path.abspath(__file__))
         self.workingdir = os.path.join(curdir, '..', '..', 'examples', 'java', 'tgz')
         fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
-        ssh_port = os.environ.get('STANTONK/FAT-CONTAINER_22_TCP')
+        self.ssh_port = os.environ.get('STANTONK/FAT-CONTAINER_22_TCP')
         with open(fileloc, 'wb') as f:
-            filecontents = MENDEL_TGZ_YAML % ssh_port
+            filecontents = MENDEL_TGZ_YAML % self.ssh_port
             print filecontents
             f.write(filecontents)
 
     def test_tgz_mendel_deploy(self):
+        (status_code, content) = self.do_deploy()
+        self.assertEqual(200, status_code)
+        self.assertIn('Hello', content)
+
+    def test_upstart_config_changes(self):
+        fabric.state.env.user = 'vagrant'
+        fabric.state.env.password = 'vagrant'
+        fabric.state.env.host_string = 'localhost:%s' % self.ssh_port 
+        self.do_deploy()
+        pre_config_status = fabric.operations.run("ps aux | grep myservice | grep changed_config | grep -v grep", warn_only=True)
+        self.assertTrue(pre_config_status.failed) # grep returns nonzero if it doesn't find the string
+        fabric.operations.sudo("sed -i 's/-jar/-Dchanged_config_line=true -jar/;' /etc/init/myservice.conf")
+        self.do_deploy()
+        config_status = fabric.operations.run("ps aux | grep myservice | grep changed_config | grep -v grep")
+        self.assertTrue(config_status.succeeded)
+
+    def tearDown(self):
+        os.remove(os.path.join(self.workingdir, MENDEL_TEST_FILE))
+
+
+    def do_deploy(self):
         cmdline = 'mendel -f %s dev deploy' % MENDEL_TEST_FILE
         print cmdline
-        p = Popen(cmdline, stdout=PIPE, shell=True, cwd=self.workingdir)
-        p.wait()
+        p = Popen(cmdline, stdout=PIPE, stderr=PIPE, shell=True, cwd=self.workingdir)
         out, err = p.communicate()
         print out
         print err
@@ -57,9 +77,4 @@ class IntegrationTests(TestCase):
             except:
                 pass
             time.sleep(2)
-
-        self.assertEqual(200, status_code)
-        self.assertIn('Hello', content)
-
-    def tearDown(self):
-        os.remove(os.path.join(self.workingdir, MENDEL_TEST_FILE))
+        return status_code, content
