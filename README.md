@@ -150,6 +150,8 @@ Deployment tracking is done **automatically** for you.
 *Plot deployments in Graphite Dashboards against other metrics you're tracking in your application:*
 ![plot-deploys](docs/plot-deploys.png)
 
+If deployment tracking fails, your deploy will be harmed.
+
 more examples
 --------
 ```

@@ -725,7 +725,12 @@ class Mendel(object):
         tags = [str(s) for s in (self._service_name, event)]
 
         data = {'what': what, 'tags': tags, 'data': data}
-        r = urllib2.urlopen(url, json.dumps(data))
+        try:
+            r = urllib2.urlopen(url, json.dumps(data), timeout=3)
+        except Exception as e:
+            print red('Error while tracking deployment event in graphite: %s' % str(e))
+            return
+
         if r.code != 200:
             print red('Unable to track deployment event in graphite (HTTP %s)' % r.code)
         else:
