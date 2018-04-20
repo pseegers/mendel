@@ -25,8 +25,6 @@ package_dir = \
 
 reqs_file = os.path.join(package_dir, 'requirements.txt')
 
-# stupid session thing. stealing tweepy's solution:
-# https://github.com/tweepy/tweepy/commit/9b4cb9eb123be05a925c1c6deaf0141699853644
 install_reqs = parse_requirements(reqs_file)
 
 
