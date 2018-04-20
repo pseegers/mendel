@@ -8,7 +8,10 @@ try:
 except ImportError:
     from distutils.core import setup
 
-from pip.req import parse_requirements
+def parse_requirements(filename):
+    """ load requirements from a pip requirements file """
+    lineiter = (line.strip() for line in open(filename))
+    return [line for line in lineiter if line and not line.startswith("#")]
 
 # place __version__ in setup.py namespace, w/o
 # having to import and creating a dependency nightmare
@@ -22,14 +25,12 @@ package_dir = \
 
 reqs_file = os.path.join(package_dir, 'requirements.txt')
 
-# stupid session thing. stealing tweepy's solution:
-# https://github.com/tweepy/tweepy/commit/9b4cb9eb123be05a925c1c6deaf0141699853644
-install_reqs = parse_requirements(reqs_file, session=uuid.uuid1())
+install_reqs = parse_requirements(reqs_file)
 
 
 setup(
     name='fabric-mendel',
-    install_requires=[str(ir.req) for ir in install_reqs],
+    install_requires=[str(ir) for ir in install_reqs],
     version=__version__, # comes from execfile() invocation above; IDEs will complain.
     description='Fabric Tooling for deploying services',
     author='Sprout Social, Inc.',
