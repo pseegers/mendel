@@ -129,7 +129,7 @@ def is_running_tests():
     the unittests are being run.
     :return: bool
     """
-    test_heuristics = ['python -m unittest', 'setup.py', 'utrunner.py']
+    test_heuristics = ['python -m unittest', 'setup.py', 'utrunner.py', 'PyCharm.app']
 
     running_tests = False
     for arg in sys.argv:
