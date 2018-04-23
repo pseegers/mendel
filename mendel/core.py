@@ -162,6 +162,10 @@ class Mendel(object):
             self._install = self._install_jar
             self._upload = self._upload_jar
             self._rollback = self._symlink_rollback
+        elif bundle_type == 'remote_jar':
+            self._install = self._install_remote_jar
+            self._upload = self._upload_remote_jar
+            self._rollback = self._symlink_rollback
         elif bundle_type == 'remote_deb':
             self._install = self._install_remote_deb
             self._upload = self._upload_remote_deb
@@ -260,6 +264,8 @@ class Mendel(object):
                     r = local('ls *.deb', capture=True)
                 elif self._bundle_type == "jar":
                     r = local('ls %s.jar' % self._jar_name, capture=True)
+                elif self._bundle_type == "remote_jar":
+                    pass
                 elif self._bundle_type == "remote_deb":
                     return None
                 else:
@@ -356,6 +362,9 @@ class Mendel(object):
             '%s'  % self._service_name
         )
 
+    def _apt_install_remote_jar(self):
+        pass
+
     def _apt_install_remote_deb(self, version=None):
         if not version:
             self._apt_install_remote_deb_latest()
@@ -409,6 +418,9 @@ class Mendel(object):
         with cd(self._rpath('releases', release_dir)):
             sudo('chown %s:%s %s' % (self._user, self._group, jar_name))
             self._change_symlink_to(self._rpath('releases', release_dir))
+
+    def _install_remote_jar(self, jar_name):
+        pass
 
     def _backup_current_release(self):
         """
@@ -467,6 +479,9 @@ class Mendel(object):
             local('mvn clean -U deploy')
         else:
             raise Exception("Unsupported project type: %s" % self._project_type)
+
+    def _upload_remote_jar(self):
+        pass
 
     def _upload_jar(self, jar_name):
         """

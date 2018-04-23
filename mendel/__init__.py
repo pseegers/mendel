@@ -36,12 +36,12 @@ def init(service_name=None, bundle_type=None, project_type=None):
         red('you must provide a service_name')
         sys.exit(1)
 
-    bundle_type = bundle_type or raw_input('enter bundle_type type (jar, tgz, deb) [jar]: ') or 'jar'
-    if bundle_type not in ('jar', 'tgz', 'deb'):
+    bundle_type = bundle_type or raw_input('enter bundle_type type (jar, tgz, deb, remote_jar) [jar]: ') or 'jar'
+    if bundle_type not in ('jar', 'tgz', 'deb', 'remote_jar'):
         red('if you want bundle_type %s, issue a pull request.' % bundle_type)
         sys.exit(1)
 
-    if bundle_type in ('jar', 'deb'):
+    if bundle_type in ('jar', 'deb', 'remote_jar'):
         # default for jar or deb packaging should just be target, this is expected
         # for most people's builds.
         build_target_path = 'target/'
