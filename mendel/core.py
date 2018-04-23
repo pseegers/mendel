@@ -362,9 +362,6 @@ class Mendel(object):
             '%s'  % self._service_name
         )
 
-    def _apt_install_remote_jar(self):
-        pass
-
     def _apt_install_remote_deb(self, version=None):
         if not version:
             self._apt_install_remote_deb_latest()
