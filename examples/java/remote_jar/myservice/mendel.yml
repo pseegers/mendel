@@ -1,0 +1,8 @@
+service_name: myservice-remote_jar
+build_target_path: target/
+bundle_type: jar
+project_type: java
+hosts:
+  dev:
+    hostnames: 127.0.0.1
+    port: 2222

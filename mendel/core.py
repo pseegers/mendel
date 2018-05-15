@@ -262,10 +262,8 @@ class Mendel(object):
                     r = local('ls -1t *.tar.gz | head -1', capture=True)
                 elif self._bundle_type == "deb":
                     r = local('ls *.deb', capture=True)
-                elif self._bundle_type == "jar":
+                elif self._bundle_type == "jar" or self._bundle_type == "remote_jar":
                     r = local('ls %s.jar' % self._jar_name, capture=True)
-                elif self._bundle_type == "remote_jar":
-                    pass
                 elif self._bundle_type == "remote_deb":
                     return None
                 else:

@@ -1,0 +1,6 @@
+{
+  "mendel/tests/test_integration.py::JarIntegrationTests::test_jar_mendel_deploy": true, 
+  "mendel/tests/test_integration.py::JarIntegrationTests::test_tgz_mendel_deploy": true, 
+  "mendel/tests/test_integration.py::JarIntegrationTests::test_upstart": true, 
+  "mendel/tests/test_integration.py::JarIntegrationTests::test_upstart_config_changes": true
+}

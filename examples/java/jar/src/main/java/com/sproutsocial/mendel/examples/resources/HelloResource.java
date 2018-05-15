@@ -1,5 +1,6 @@
 package com.sproutsocial.mendel.examples.resources;
 
+import com.sproutsocial.mendel.examples.MyConfiguration;
 
 import javax.validation.Valid;
 import javax.ws.rs.GET;
