@@ -10,7 +10,7 @@
     </prerequisites>
 
     <groupId>com.sproutsocial</groupId>
-    <artifactId>myservice</artifactId>
+    <artifactId>myservice-jar</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 

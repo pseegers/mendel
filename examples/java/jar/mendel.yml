@@ -1,4 +1,4 @@
-service_name: myservice
+service_name: myservice-jar
 build_target_path: target/
 bundle_type: jar
 project_type: java

@@ -9,13 +9,6 @@ import io.dropwizard.setup.Environment;
 
 public class MyService extends Application<MyConfiguration> {
 
-    private final DiscoveryBundle<MyConfiguration> discoveryBundle = new DiscoveryBundle<MyConfiguration>() {
-        @Override
-        public DiscoveryFactory getDiscoveryFactory(MyConfiguration configuration) {
-            return configuration.getDiscoveryFactory();
-        }
-    };
-
     public static void main(final String[] args) throws Exception {
         new MyService().run(args);
     }
@@ -27,7 +20,6 @@ public class MyService extends Application<MyConfiguration> {
 
     @Override
     public void initialize(final Bootstrap<MyConfiguration> bootstrap) {
-        bootstrap.addBundle(discoveryBundle);
     }
 
     @Override

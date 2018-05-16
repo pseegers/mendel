@@ -10,7 +10,7 @@
     </prerequisites>
 
     <groupId>com.sproutsocial</groupId>
-    <artifactId>myservice</artifactId>
+    <artifactId>myservice-tgz</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -21,7 +21,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <dropwizard.version>0.7.1</dropwizard.version>
         <mainClass>com.sproutsocial.mendel.examples.myserviceApplication</mainClass>
-        <serviceName>myservice</serviceName>
+        <serviceName>myservice-tgz</serviceName>
     </properties>
 
     <dependencies>
@@ -77,7 +77,7 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>myservice</id>
+                        <id>myservice-tgz</id>
                         <phase>package</phase>
                         <configuration>
                             <descriptor>src/main/assembly/${serviceName}.xml</descriptor>

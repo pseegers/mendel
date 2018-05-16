@@ -8,17 +8,5 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
 public class MyConfiguration extends Configuration {
-    @Valid
-    @NotNull
-    private DiscoveryFactory discovery = new DiscoveryFactory();
 
-    @JsonProperty("discovery")
-    public DiscoveryFactory getDiscoveryFactory() {
-        return discovery;
-    }
-
-    @JsonProperty("discovery")
-    public void setDiscoveryFactory(DiscoveryFactory discoveryFactory) {
-        this.discovery = discoveryFactory;
-    }
 }
