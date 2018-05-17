@@ -1,2 +1,17 @@
 .pytest_cache
 .DS_Store
+*.swo	
+*.swp	
+.venv	
+dist/	
+build/	
+*.egg-info	
+*.pyc	
+.vagrant/	
+*.egg	
+*.iml	
+.idea/	
+target/	
+.eggs/	
+.tox/	
+.cache/
