@@ -21,7 +21,7 @@
 
     <files>
         <file>
-            <source>conf/myservice.yml</source>
+            <source>conf/myservice-tgz.yml</source>
             <fileMode>0664</fileMode>
         </file>
     </files>
