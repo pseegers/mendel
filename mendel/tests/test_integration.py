@@ -11,7 +11,7 @@ import time
 MENDEL_TEST_FILE = 'mendel.test.yml'
 
 
-class IntegrationTests(TestCase):
+class IntegrationTestMixin(object):
 
     def setUp(self):
         print os.environ.keys()
@@ -21,6 +21,7 @@ class IntegrationTests(TestCase):
             filecontents = self.MENDEL_YAML % self.ssh_port
             print filecontents
             f.write(filecontents)
+        super(IntegrationTestMixin, self).setUp()
 
     def test_mendel_deploy(self):
         (status_code, content) = self.do_deploy()
@@ -71,9 +72,10 @@ class IntegrationTests(TestCase):
 
     def tearDown(self):
         os.remove(os.path.join(self.workingdir, MENDEL_TEST_FILE))
+        super(IntegrationTestMixin, self).tearDown()
 
 
-class TgzIntegrationTests(IntegrationTests):
+class TgzIntegrationTests(IntegrationTestMixin, TestCase):
 
     MENDEL_YAML = """
     service_name: myservice-tgz
@@ -93,42 +95,26 @@ class TgzIntegrationTests(IntegrationTests):
 
         super(TgzIntegrationTests, self).setUp()
 
-    def test_mendel_deploy(self):
-        super(TgzIntegrationTests, self).test_mendel_deploy()
-
-    def test_upstart_config_changes(self):
-        super(TgzIntegrationTests, self).test_upstart_config_changes()
-        
     def tearDown(self):
         super(TgzIntegrationTests, self).tearDown()
 
-
-class JarIntegrationTests(IntegrationTests):
-
-    MENDEL_YAML = """
-    service_name: myservice-jar
-    bundle_type: jar
-    project_type: java
-    build_target_path: target/
-    hosts:
-      dev:
-        hostnames: 127.0.0.1
-        port: %s
-    """
-
-    def setUp(self):
-        self.curdir = os.path.dirname(os.path.abspath(__file__))
-        self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'jar')
-        self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
-        self.service_name = "myservice-jar"
-
-        super(JarIntegrationTests, self).setUp()
-
-    def test_mendel_deploy(self):
-        super(JarIntegrationTests, self).test_mendel_deploy()
-
-    def test_upstart_config_changes(self):
-        super(JarIntegrationTests, self).test_upstart_config_changes()
-
-    def tearDown(self):
-        super(JarIntegrationTests, self).tearDown()
+# class JarIntegrationTests(IntegrationTestMixin, TestCase):
+#
+#     MENDEL_YAML = """
+#     service_name: myservice-jar
+#     bundle_type: jar
+#     project_type: java
+#     build_target_path: target/
+#     hosts:
+#       dev:
+#         hostnames: 127.0.0.1
+#         port: %s
+#     """
+#
+#     def setUp(self):
+#         self.curdir = os.path.dirname(os.path.abspath(__file__))
+#         self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'jar')
+#         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
+#         self.service_name = "myservice-jar"
+#
+#         super(JarIntegrationTests, self).setUp()
