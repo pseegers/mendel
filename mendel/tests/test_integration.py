@@ -95,9 +95,6 @@ class TgzIntegrationTests(IntegrationTestMixin, TestCase):
 
         super(TgzIntegrationTests, self).setUp()
 
-    def tearDown(self):
-        super(TgzIntegrationTests, self).tearDown()
-
 # class JarIntegrationTests(IntegrationTestMixin, TestCase):
 #
 #     MENDEL_YAML = """
