@@ -34,12 +34,15 @@ class IntegrationTestMixin(object):
         state.env.user = 'vagrant'
         state.env.password = 'vagrant'
         state.env.host_string = 'localhost:%s' % self.ssh_port
+        state.env.abort_exception = True
         self.do_deploy()
         pre_config_status = operations.run("ps aux | grep {0} | grep changed_config | grep -v grep".format(self.service_name),
                                            warn_only=True)
         self.assertTrue(pre_config_status.failed)  # grep returns nonzero if it doesn't find the string
-        operations.sudo("sed -i 's/-jar/-Dchanged_config_line=true -jar/;' /etc/init/{0}.conf".format(self.service_name))
+        # Emulate chef change to upstart config
+        operations.sudo("sed -i 's/exec java -jar/exec java -Dchanged_config_line=true -jar/;' /etc/init/{0}.conf".format(self.service_name))
         self.do_deploy()
+        time.sleep(2)
         config_status = operations.run("ps aux | grep {0} | grep changed_config | grep -v grep".format(self.service_name))
         self.assertTrue(config_status.succeeded)
         
@@ -95,23 +98,23 @@ class TgzIntegrationTests(IntegrationTestMixin, TestCase):
 
         super(TgzIntegrationTests, self).setUp()
 
-# class JarIntegrationTests(IntegrationTestMixin, TestCase):
-#
-#     MENDEL_YAML = """
-#     service_name: myservice-jar
-#     bundle_type: jar
-#     project_type: java
-#     build_target_path: target/
-#     hosts:
-#       dev:
-#         hostnames: 127.0.0.1
-#         port: %s
-#     """
-#
-#     def setUp(self):
-#         self.curdir = os.path.dirname(os.path.abspath(__file__))
-#         self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'jar')
-#         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
-#         self.service_name = "myservice-jar"
-#
-#         super(JarIntegrationTests, self).setUp()
+class JarIntegrationTests(IntegrationTestMixin, TestCase):
+
+    MENDEL_YAML = """
+    service_name: myservice-jar
+    bundle_type: jar
+    project_type: java
+    build_target_path: target/
+    hosts:
+      dev:
+        hostnames: 127.0.0.1
+        port: %s
+    """
+
+    def setUp(self):
+        self.curdir = os.path.dirname(os.path.abspath(__file__))
+        self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'jar')
+        self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
+        self.service_name = "myservice-jar"
+
+        super(JarIntegrationTests, self).setUp()
