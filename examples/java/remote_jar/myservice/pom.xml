@@ -143,18 +143,18 @@
 
     <distributionManagement>
         <repository>
-            <id>internal</id>
-            <url>http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/</url>
+            <id>docker_container</id>
+            <url>http://localhost:8081/nexus/content/repositories/releases/</url>
         </repository>
-        <snapshotRepository>
-            <id>snapshots</id>
-            <url>http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/snapshots/</url>
-        </snapshotRepository>
+        <!--<snapshotRepository>-->
+            <!--<id>snapshots</id>-->
+            <!--<url>http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/snapshots/</url>-->
+        <!--</snapshotRepository>-->
     </distributionManagement>
     <repositories>
         <repository>
-            <id>internal</id>
-            <url>http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/</url>
+            <id>docker_container</id>
+            <url>http://localhost:8081/nexus/content/repositories/releases/</url>
             <releases>
                 <enabled>true</enabled>
             </releases>
