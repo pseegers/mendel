@@ -34,7 +34,6 @@ class IntegrationTestMixin(object):
         state.env.user = 'vagrant'
         state.env.password = 'vagrant'
         state.env.host_string = 'localhost:%s' % self.ssh_port
-        state.env.abort_exception = True
         self.do_deploy()
         pre_config_status = operations.run("ps aux | grep {0} | grep changed_config | grep -v grep".format(self.service_name),
                                            warn_only=True)
@@ -42,7 +41,6 @@ class IntegrationTestMixin(object):
         # Emulate chef change to upstart config
         operations.sudo("sed -i 's/exec java -jar/exec java -Dchanged_config_line=true -jar/;' /etc/init/{0}.conf".format(self.service_name))
         self.do_deploy()
-        time.sleep(2)
         config_status = operations.run("ps aux | grep {0} | grep changed_config | grep -v grep".format(self.service_name))
         self.assertTrue(config_status.succeeded)
         
@@ -75,6 +73,7 @@ class IntegrationTestMixin(object):
 
     def tearDown(self):
         os.remove(os.path.join(self.workingdir, MENDEL_TEST_FILE))
+        operations.run("sudo service {0} stop".format(self.service_name))
         super(IntegrationTestMixin, self).tearDown()
 
 
