@@ -73,7 +73,13 @@ class IntegrationTestMixin(object):
 
     def tearDown(self):
         os.remove(os.path.join(self.workingdir, MENDEL_TEST_FILE))
-        operations.run("sudo service {0} stop".format(self.service_name))
+        state.env.user = 'vagrant'
+        state.env.password = 'vagrant'
+        print "User and password have been assigned"
+        state.env.host_string = 'localhost:%s' % self.ssh_port
+        print "host has been assigned. Now stoping service"
+        operations.sudo("service {0} stop".format(self.service_name))
+        print "Service has been stopped."
         super(IntegrationTestMixin, self).tearDown()
 
 
