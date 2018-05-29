@@ -2,10 +2,8 @@ import os
 import urllib2
 import time
 import re
-import tempfile
 from fabric import state
 from fabric import operations
-from fabric.colors import green
 from subprocess import PIPE
 from subprocess import Popen
 from unittest import TestCase
@@ -85,46 +83,46 @@ class IntegrationTestMixin(object):
         super(IntegrationTestMixin, self).tearDown()
 
 
-class TgzIntegrationTests(IntegrationTestMixin, TestCase):
-
-    MENDEL_YAML = """
-    service_name: myservice-tgz
-    bundle_type: tgz
-    project_type: java
-    hosts:
-      dev:
-        hostnames: 127.0.0.1
-        port: %s
-    """
-
-    def setUp(self):
-        self.curdir = os.path.dirname(os.path.abspath(__file__))
-        self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'tgz')
-        self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
-        self.service_name = "myservice-tgz"
-
-        super(TgzIntegrationTests, self).setUp()
-
-class JarIntegrationTests(IntegrationTestMixin, TestCase):
-
-    MENDEL_YAML = """
-    service_name: myservice-jar
-    bundle_type: jar
-    project_type: java
-    build_target_path: target/
-    hosts:
-      dev:
-        hostnames: 127.0.0.1
-        port: %s
-    """
-
-    def setUp(self):
-        self.curdir = os.path.dirname(os.path.abspath(__file__))
-        self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'jar')
-        self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
-        self.service_name = "myservice-jar"
-
-        super(JarIntegrationTests, self).setUp()
+# class TgzIntegrationTests(IntegrationTestMixin, TestCase):
+#
+#     MENDEL_YAML = """
+#     service_name: myservice-tgz
+#     bundle_type: tgz
+#     project_type: java
+#     hosts:
+#       dev:
+#         hostnames: 127.0.0.1
+#         port: %s
+#     """
+#
+#     def setUp(self):
+#         self.curdir = os.path.dirname(os.path.abspath(__file__))
+#         self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'tgz')
+#         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
+#         self.service_name = "myservice-tgz"
+#
+#         super(TgzIntegrationTests, self).setUp()
+#
+# class JarIntegrationTests(IntegrationTestMixin, TestCase):
+#
+#     MENDEL_YAML = """
+#     service_name: myservice-jar
+#     bundle_type: jar
+#     project_type: java
+#     build_target_path: target/
+#     hosts:
+#       dev:
+#         hostnames: 127.0.0.1
+#         port: %s
+#     """
+#
+#     def setUp(self):
+#         self.curdir = os.path.dirname(os.path.abspath(__file__))
+#         self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'jar')
+#         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
+#         self.service_name = "myservice-jar"
+#
+#         super(JarIntegrationTests, self).setUp()
 
 class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
 
@@ -140,6 +138,7 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
     """
 
     def setUp(self):
+        nexus_container = self.get_nexus_container_name()
         self.curdir = os.path.dirname(os.path.abspath(__file__))
         self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'remote_jar')
         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
@@ -150,7 +149,7 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
 
         nexus_port = os.environ.get('SONATYPE/NEXUS_8081_TCP')
         self.nexus_url = 'http://localhost:%s/nexus/content/repositories/releases/' % nexus_port
-        self.curl_url =
+        self.curl_url = 'http://{0}:{1}/nexus/content/repositories/releases/'.format(nexus_container, nexus_port)
         os.environ['MENDEL_NEXUS_REPOSITORY'] = self.curl_url
 
         with open (self.pom_template, 'r') as tmp_file:
@@ -166,3 +165,9 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
     def tearDown(self):
         os.remove(os.path.join(self.pom))
         super(RemoteJarIntegrationTests, self).tearDown()
+
+
+    def get_nexus_container_name(self):
+        output = operations.local('docker ps -l', capture=True)
+        output = re.split("\s+", output)
+        return output[22]
