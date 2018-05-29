@@ -140,11 +140,11 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
     def setUp(self):
         nexus_container = self.get_nexus_container_name()
         self.curdir = os.path.dirname(os.path.abspath(__file__))
-        self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'remote_jar')
+        self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'remote_jar', 'myservice')
         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
         self.service_name = "myservice-remote_jar"
-        self.pom_template = os.path.join(self.workingdir, 'myservice/tmp.xml')
-        self.pom = os.path.join(self.workingdir, 'myservice', 'pom.xml')
+        self.pom_template = os.path.join(self.workingdir, 'tmp.xml')
+        self.pom = os.path.join(self.workingdir, 'pom.xml')
         self.old_url = 'http://localhost:8081/nexus/content/repositories/releases/'
 
         nexus_port = os.environ.get('SONATYPE/NEXUS_8081_TCP')
