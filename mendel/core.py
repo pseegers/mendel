@@ -6,6 +6,7 @@ import os
 import sys
 import urllib2
 import re
+import time
 
 import requests
 from debian import deb822
@@ -263,8 +264,10 @@ class Mendel(object):
                     r = local('ls -1t *.tar.gz | head -1', capture=True)
                 elif self._bundle_type == "deb":
                     r = local('ls *.deb', capture=True)
-                elif self._bundle_type == "jar" or self._bundle_type == "remote_jar":
+                elif self._bundle_type == "jar":
                     r = local('ls %s.jar' % self._jar_name, capture=True)
+                elif self._bundle_type == "remote_jar":
+                    return None
                 elif self._bundle_type == "remote_deb":
                     return None
                 else:
@@ -473,17 +476,19 @@ class Mendel(object):
         else:
             raise Exception("Unsupported project type: %s" % self._project_type)
 
-    def _upload_remote_jar(self):
+    def _upload_remote_jar(self, *ignored):
         nexus_url = os.environ.get('MENDEL_NEXUS_REPOSITORY') # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/
 
         mvn_command = "mvn -q -N org.codehaus.mojo:exec-maven-plugin:1.3.1:exec \
                        -Dexec.executable='echo' \
                        -Dexec.args='${project.%s}'"
 
-        project_version = local(mvn_command % 'version')
+        print blue('Generating nexus URL')
+        project_version = local(mvn_command % ('version'), capture=True)
 
-        group_id = local(mvn_command % 'groupId')  # com.github.sproutsocial
-        group_id = re.sub('.', '/', group_id) # com/github/sproutsocial
+        group_id = local(mvn_command % ('groupId'), capture=True)  # com.github.sproutsocial
+
+        group_id = re.sub('\.', '/', group_id) # com/github/sproutsocial
 
         nexus_url += group_id # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/com/github/sproutsocial
         nexus_url += '/' # add backslash
@@ -495,6 +500,7 @@ class Mendel(object):
         nexus_url += '{0}-{1}.jar'.format(self._service_name, project_version)
 
         if self._project_type == "java":
+            print blue('Pushing jar to nexus server')
             local('mvn deploy')
         else:
             raise Exception("Unsupported project type: %s" % self._project_type)
@@ -505,7 +511,11 @@ class Mendel(object):
         self._create_if_missing(self._rpath('releases', release_dir))
 
         with cd(self._rpath('releases', release_dir)):
+            print blue('Downloading jar from nexus server')
             sudo('wget %s' % (nexus_url))
+
+            # rename versioned jar to normal service jar
+            sudo('mv *jar %s.jar' % (self._service_name))
 
         return release_dir
 
