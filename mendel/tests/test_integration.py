@@ -1,12 +1,14 @@
+import os
+import urllib2
+import time
+import re
+import tempfile
+from fabric import state
+from fabric import operations
+from fabric.colors import green
 from subprocess import PIPE
 from subprocess import Popen
 from unittest import TestCase
-import os
-import urllib2
-from fabric import state
-from fabric import operations
-import time
-
 
 MENDEL_TEST_FILE = 'mendel.test.yml'
 
@@ -77,7 +79,7 @@ class IntegrationTestMixin(object):
         state.env.password = 'vagrant'
         print "User and password have been assigned"
         state.env.host_string = 'localhost:%s' % self.ssh_port
-        print "host has been assigned. Now stoping service"
+        print "host has been assigned. Now stopping service"
         operations.sudo("service {0} stop".format(self.service_name))
         print "Service has been stopped."
         super(IntegrationTestMixin, self).tearDown()
@@ -123,3 +125,44 @@ class JarIntegrationTests(IntegrationTestMixin, TestCase):
         self.service_name = "myservice-jar"
 
         super(JarIntegrationTests, self).setUp()
+
+class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
+
+    MENDEL_YAML = """
+    service_name: myservice-remote_jar
+    bundle_type: remote_jar
+    project_type: java
+    build_target_path: target/
+    hosts:
+      dev:
+        hostnames: 127.0.0.1
+        port: %s
+    """
+
+    def setUp(self):
+        self.curdir = os.path.dirname(os.path.abspath(__file__))
+        self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'remote_jar')
+        self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
+        self.service_name = "myservice-remote_jar"
+        self.pom_template = os.path.join(self.workingdir, 'myservice/tmp.xml')
+        self.pom = os.path.join(self.workingdir, 'myservice', 'pom.xml')
+        self.old_url = 'http://localhost:8081/nexus/content/repositories/releases/'
+
+        nexus_port = os.environ.get('SONATYPE/NEXUS_8081_TCP')
+        self.nexus_url = 'http://localhost:%s/nexus/content/repositories/releases/' % nexus_port
+        self.curl_url =
+        os.environ['MENDEL_NEXUS_REPOSITORY'] = self.curl_url
+
+        with open (self.pom_template, 'r') as tmp_file:
+            text = tmp_file.read()
+
+        with open(self.pom, 'wb') as pom_file:
+            filecontents = re.sub(self.old_url, self.nexus_url, text)
+            print filecontents
+            pom_file.write(filecontents)
+
+        super(RemoteJarIntegrationTests, self).setUp()
+
+    def tearDown(self):
+        os.remove(os.path.join(self.pom))
+        super(RemoteJarIntegrationTests, self).tearDown()

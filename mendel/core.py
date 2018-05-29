@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import urllib2
+import re
 
 import requests
 from debian import deb822
@@ -163,7 +164,7 @@ class Mendel(object):
             self._upload = self._upload_jar
             self._rollback = self._symlink_rollback
         elif bundle_type == 'remote_jar':
-            self._install = self._install_remote_jar
+            self._install = self._install_jar
             self._upload = self._upload_remote_jar
             self._rollback = self._symlink_rollback
         elif bundle_type == 'remote_deb':
@@ -414,9 +415,6 @@ class Mendel(object):
             sudo('chown %s:%s %s' % (self._user, self._group, jar_name))
             self._change_symlink_to(self._rpath('releases', release_dir))
 
-    def _install_remote_jar(self, jar_name):
-        pass
-
     def _backup_current_release(self):
         """
 
@@ -468,7 +466,7 @@ class Mendel(object):
 
     def _upload_remote_deb(self, *ignored):
         """
-        upload a deb to /tmp,  return path
+        upload a deb to nexus
         """
         if self._project_type == "java":
             local('mvn clean -U deploy')
@@ -476,11 +474,44 @@ class Mendel(object):
             raise Exception("Unsupported project type: %s" % self._project_type)
 
     def _upload_remote_jar(self):
-        pass
+        nexus_url = os.environ.get('MENDEL_NEXUS_REPOSITORY') # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/
+
+        mvn_command = "mvn -q -N org.codehaus.mojo:exec-maven-plugin:1.3.1:exec \
+                       -Dexec.executable='echo' \
+                       -Dexec.args='${project.%s}'"
+
+        project_version = local(mvn_command % 'version')
+
+        group_id = local(mvn_command % 'groupId')  # com.github.sproutsocial
+        group_id = re.sub('.', '/', group_id) # com/github/sproutsocial
+
+        nexus_url += group_id # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/com/github/sproutsocial
+        nexus_url += '/' # add backslash
+        nexus_url += self._service_name # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/com/
+                                        # github/sproutsocial/service_name
+        nexus_url += '/'
+        nexus_url += project_version
+        nexus_url += '/'
+        nexus_url += '{0}-{1}.jar'.format(self._service_name, project_version)
+
+        if self._project_type == "java":
+            local('mvn deploy')
+        else:
+            raise Exception("Unsupported project type: %s" % self._project_type)
+
+        self._create_if_missing(self._rpath('releases'))
+        self._create_if_missing(self._rpath('releases'))
+        release_dir = self._new_release_dir()
+        self._create_if_missing(self._rpath('releases', release_dir))
+
+        with cd(self._rpath('releases', release_dir)):
+            sudo('wget %s' % (nexus_url))
+
+        return release_dir
 
     def _upload_jar(self, jar_name):
         """
-        create a new release dir and upload tarball
+        create a new release dir and upload jar
         """
         self._create_if_missing(self._rpath('releases'))
         release_dir = self._new_release_dir()
