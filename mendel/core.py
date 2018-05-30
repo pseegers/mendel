@@ -477,6 +477,7 @@ class Mendel(object):
             raise Exception("Unsupported project type: %s" % self._project_type)
 
     def _upload_remote_jar(self, *ignored):
+        print blue("Grabbing MENDEL_NEXUS_REPOSITORY variable from your environment...")
         nexus_url = os.environ.get('MENDEL_NEXUS_REPOSITORY') # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/
 
         mvn_command = "mvn -q -N org.codehaus.mojo:exec-maven-plugin:1.3.1:exec \
@@ -505,7 +506,6 @@ class Mendel(object):
         else:
             raise Exception("Unsupported project type: %s" % self._project_type)
 
-        self._create_if_missing(self._rpath('releases'))
         self._create_if_missing(self._rpath('releases'))
         release_dir = self._new_release_dir()
         self._create_if_missing(self._rpath('releases', release_dir))
