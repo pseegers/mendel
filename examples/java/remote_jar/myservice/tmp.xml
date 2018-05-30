@@ -11,7 +11,7 @@
 
     <groupId>com.github.Ibracadabra05</groupId>
     <artifactId>myservice-remote_jar</artifactId>
-    <version>0.0.3</version>
+    <version>0.0.6</version>
     <packaging>jar</packaging>
 
     <name>MyService</name>
@@ -43,7 +43,7 @@
     </dependencies>
 
     <build>
-        <finalName>${project.artifactId}</finalName>
+        <!-- <finalName>${project.artifactId}</finalName> -->
         <plugins>
             <plugin>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -146,10 +146,6 @@
             <id>docker_container</id>
             <url>http://localhost:8081/nexus/content/repositories/releases/</url>
         </repository>
-        <!--<snapshotRepository>-->
-            <!--<id>snapshots</id>-->
-            <!--<url>http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/snapshots/</url>-->
-        <!--</snapshotRepository>-->
     </distributionManagement>
     <repositories>
         <repository>
