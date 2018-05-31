@@ -37,12 +37,20 @@ class IntegrationTestMixin(object):
         state.env.user = 'vagrant'
         state.env.password = 'vagrant'
         state.env.host_string = 'localhost:%s' % self.ssh_port
+
+        if self.pom:
+            self.update_project_version('0.0.6', '0.0.7')
+
         self.do_deploy()
         pre_config_status = operations.run("ps aux | grep {0} | grep changed_config | grep -v grep".format(self.service_name),
                                            warn_only=True)
         self.assertTrue(pre_config_status.failed)  # grep returns nonzero if it doesn't find the string
         # Emulate chef change to upstart config
         operations.sudo("sed -i 's/exec java -jar/exec java -Dchanged_config_line=true -jar/;' /etc/init/{0}.conf".format(self.service_name))
+
+        if self.pom:
+            self.update_project_version('0.0.7', '0.0.8')
+
         self.do_deploy()
         config_status = operations.run("ps aux | grep {0} | grep changed_config | grep -v grep".format(self.service_name))
         self.assertTrue(config_status.succeeded)
@@ -74,6 +82,17 @@ class IntegrationTestMixin(object):
             time.sleep(2)
         return status_code, content
 
+    def update_project_version(self, old_version, new_version):
+        # Change the service's version because nexus does not accept same version deploys
+        with open(self.pom, 'r') as pom_file:
+            text = pom_file.read()
+
+        os.remove(os.path.join(self.pom))
+
+        with open(self.pom, 'wb') as new_pom_file:
+            filecontents = re.sub(old_version, new_version, text)
+            new_pom_file.write(filecontents)
+
     def tearDown(self):
         os.remove(os.path.join(self.workingdir, MENDEL_TEST_FILE))
         state.env.user = 'vagrant'
@@ -86,46 +105,48 @@ class IntegrationTestMixin(object):
         super(IntegrationTestMixin, self).tearDown()
 
 
-# class TgzIntegrationTests(IntegrationTestMixin, TestCase):
-#
-#     MENDEL_YAML = """
-#     service_name: myservice-tgz
-#     bundle_type: tgz
-#     project_type: java
-#     hosts:
-#       dev:
-#         hostnames: 127.0.0.1
-#         port: %s
-#     """
-#
-#     def setUp(self):
-#         self.curdir = os.path.dirname(os.path.abspath(__file__))
-#         self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'tgz')
-#         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
-#         self.service_name = "myservice-tgz"
-#
-#         super(TgzIntegrationTests, self).setUp()
-#
-# class JarIntegrationTests(IntegrationTestMixin, TestCase):
-#
-#     MENDEL_YAML = """
-#     service_name: myservice-jar
-#     bundle_type: jar
-#     project_type: java
-#     build_target_path: target/
-#     hosts:
-#       dev:
-#         hostnames: 127.0.0.1
-#         port: %s
-#     """
-#
-#     def setUp(self):
-#         self.curdir = os.path.dirname(os.path.abspath(__file__))
-#         self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'jar')
-#         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
-#         self.service_name = "myservice-jar"
-#
-#         super(JarIntegrationTests, self).setUp()
+class TgzIntegrationTests(IntegrationTestMixin, TestCase):
+
+    MENDEL_YAML = """
+    service_name: myservice-tgz
+    bundle_type: tgz
+    project_type: java
+    hosts:
+      dev:
+        hostnames: 127.0.0.1
+        port: %s
+    """
+
+    def setUp(self):
+        self.curdir = os.path.dirname(os.path.abspath(__file__))
+        self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'tgz')
+        self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
+        self.service_name = "myservice-tgz"
+        self.pom = None
+
+        super(TgzIntegrationTests, self).setUp()
+
+class JarIntegrationTests(IntegrationTestMixin, TestCase):
+
+    MENDEL_YAML = """
+    service_name: myservice-jar
+    bundle_type: jar
+    project_type: java
+    build_target_path: target/
+    hosts:
+      dev:
+        hostnames: 127.0.0.1
+        port: %s
+    """
+
+    def setUp(self):
+        self.curdir = os.path.dirname(os.path.abspath(__file__))
+        self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'jar')
+        self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
+        self.service_name = "myservice-jar"
+        self.pom = None
+
+        super(JarIntegrationTests, self).setUp()
 
 class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
 
@@ -155,7 +176,7 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
         self.curl_url = '{0}:{1}/nexus/content/repositories/releases/'.format(nexus_hostname, '8081')
         os.environ['MENDEL_NEXUS_REPOSITORY'] = self.curl_url
 
-        with open (self.pom_template, 'r') as tmp_file:
+        with open(self.pom_template, 'r') as tmp_file:
             text = tmp_file.read()
 
         with open(self.pom, 'wb') as pom_file:
@@ -173,17 +194,6 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
         print blue('Extracting nexus hostname...')
         client = docker.from_env()
         container_list = client.containers.list()
-
-        '''
-        "Ports": {
-            "8081/tcp": [
-                {
-                    "HostPort": "32773",
-                    "HostIp": "0.0.0.0"
-                }
-            ]
-        }
-        '''
 
         if len(container_list) > 0:
             for container in container_list:
