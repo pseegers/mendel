@@ -487,14 +487,14 @@ class Mendel(object):
         print blue('Generating nexus URL')
         project_version = local(mvn_command % ('version'), capture=True)
 
-        group_id = local(mvn_command % ('groupId'), capture=True)  # com.github.sproutsocial
+        group_id = local(mvn_command % ('groupId'), capture=True)  
 
-        group_id = re.sub('\.', '/', group_id) # com/github/sproutsocial
+        group_id = re.sub('\.', '/', group_id)
 
-        nexus_url += group_id # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/com/github/sproutsocial
-        nexus_url += '/' # add backslash
-        nexus_url += self._service_name # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/com/
-                                        # github/sproutsocial/service_name
+        nexus_url += group_id
+        nexus_url += '/'
+        nexus_url += self._service_name
+
         nexus_url += '/'
         nexus_url += project_version
         nexus_url += '/'
