@@ -1,3 +1,4 @@
+import docker
 import os
 import urllib2
 import time
@@ -7,6 +8,8 @@ from fabric import operations
 from subprocess import PIPE
 from subprocess import Popen
 from unittest import TestCase
+
+from fabric.colors import blue
 
 MENDEL_TEST_FILE = 'mendel.test.yml'
 
@@ -83,46 +86,46 @@ class IntegrationTestMixin(object):
         super(IntegrationTestMixin, self).tearDown()
 
 
-class TgzIntegrationTests(IntegrationTestMixin, TestCase):
-
-    MENDEL_YAML = """
-    service_name: myservice-tgz
-    bundle_type: tgz
-    project_type: java
-    hosts:
-      dev:
-        hostnames: 127.0.0.1
-        port: %s
-    """
-
-    def setUp(self):
-        self.curdir = os.path.dirname(os.path.abspath(__file__))
-        self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'tgz')
-        self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
-        self.service_name = "myservice-tgz"
-
-        super(TgzIntegrationTests, self).setUp()
-
-class JarIntegrationTests(IntegrationTestMixin, TestCase):
-
-    MENDEL_YAML = """
-    service_name: myservice-jar
-    bundle_type: jar
-    project_type: java
-    build_target_path: target/
-    hosts:
-      dev:
-        hostnames: 127.0.0.1
-        port: %s
-    """
-
-    def setUp(self):
-        self.curdir = os.path.dirname(os.path.abspath(__file__))
-        self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'jar')
-        self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
-        self.service_name = "myservice-jar"
-
-        super(JarIntegrationTests, self).setUp()
+# class TgzIntegrationTests(IntegrationTestMixin, TestCase):
+#
+#     MENDEL_YAML = """
+#     service_name: myservice-tgz
+#     bundle_type: tgz
+#     project_type: java
+#     hosts:
+#       dev:
+#         hostnames: 127.0.0.1
+#         port: %s
+#     """
+#
+#     def setUp(self):
+#         self.curdir = os.path.dirname(os.path.abspath(__file__))
+#         self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'tgz')
+#         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
+#         self.service_name = "myservice-tgz"
+#
+#         super(TgzIntegrationTests, self).setUp()
+#
+# class JarIntegrationTests(IntegrationTestMixin, TestCase):
+#
+#     MENDEL_YAML = """
+#     service_name: myservice-jar
+#     bundle_type: jar
+#     project_type: java
+#     build_target_path: target/
+#     hosts:
+#       dev:
+#         hostnames: 127.0.0.1
+#         port: %s
+#     """
+#
+#     def setUp(self):
+#         self.curdir = os.path.dirname(os.path.abspath(__file__))
+#         self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'jar')
+#         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
+#         self.service_name = "myservice-jar"
+#
+#         super(JarIntegrationTests, self).setUp()
 
 class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
 
@@ -138,7 +141,7 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
     """
 
     def setUp(self):
-        nexus_container = self.get_nexus_container_name()
+        nexus_hostname, nexus_docker_port = self.get_nexus_hostname_and_port()
         self.curdir = os.path.dirname(os.path.abspath(__file__))
         self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'remote_jar', 'myservice')
         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
@@ -149,7 +152,7 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
 
         nexus_port = os.environ.get('SONATYPE/NEXUS_8081_TCP')
         self.nexus_url = 'http://localhost:%s/nexus/content/repositories/releases/' % nexus_port
-        self.curl_url = '{0}:{1}/nexus/content/repositories/releases/'.format(nexus_container, nexus_port)
+        self.curl_url = '{0}:{1}/nexus/content/repositories/releases/'.format(nexus_hostname, '8081')
         os.environ['MENDEL_NEXUS_REPOSITORY'] = self.curl_url
 
         with open (self.pom_template, 'r') as tmp_file:
@@ -166,7 +169,29 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
         super(RemoteJarIntegrationTests, self).tearDown()
 
 
-    def get_nexus_container_name(self):
-        output = operations.local('docker ps -l', capture=True)
-        output = re.split("\s+", output)
-        return output[-1]
+    def get_nexus_hostname_and_port(self):
+        print blue('Extracting nexus hostname...')
+        client = docker.from_env()
+        container_list = client.containers.list()
+
+        '''
+        "Ports": {
+            "8081/tcp": [
+                {
+                    "HostPort": "32773",
+                    "HostIp": "0.0.0.0"
+                }
+            ]
+        }
+        '''
+
+        if len(container_list) > 0:
+            for container in container_list:
+                container = container.__dict__
+                if container['attrs']['Config']['Image'] == 'sonatype/nexus:oss':
+                    hostname = container['attrs']['NetworkSettings']['IPAddress']
+                    port = container['attrs']['NetworkSettings']['Ports']['8081/tcp'][0]['HostPort']
+                    print "{0}:{1}".format(hostname, port)
+                    return hostname, port
+        else:
+            raise Exception('No containers have been spun up')

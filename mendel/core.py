@@ -415,7 +415,7 @@ class Mendel(object):
         release_dir = self._new_release_dir()
 
         with cd(self._rpath('releases', release_dir)):
-            sudo('chown %s:%s %s' % (self._user, self._group, jar_name))
+            sudo('chown %s:%s %s' % (self._user, self._group, jar_name or self._service_name + '.jar'))
             self._change_symlink_to(self._rpath('releases', release_dir))
 
     def _backup_current_release(self):
@@ -476,7 +476,7 @@ class Mendel(object):
         else:
             raise Exception("Unsupported project type: %s" % self._project_type)
 
-    def _upload_remote_jar(self, *ignored):
+    def _upload_remote_jar(self, jar_name):
         print blue("Grabbing MENDEL_NEXUS_REPOSITORY variable from your environment...")
         nexus_url = os.environ.get('MENDEL_NEXUS_REPOSITORY') # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/
 
@@ -515,7 +515,7 @@ class Mendel(object):
             sudo('wget %s' % (nexus_url))
 
             # rename versioned jar to normal service jar
-            sudo('mv *jar %s.jar' % (self._service_name))
+            sudo('mv *.jar %s.jar' % (self._service_name))
 
         return release_dir
 
