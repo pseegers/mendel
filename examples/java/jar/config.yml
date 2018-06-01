@@ -13,18 +13,3 @@ logging:
       threshold: ALL
       timeZone: UTC
       logFormat: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-
-discovery:
-  serviceName: "mendel-hello-world"
-  hosts:
-    - zookeeper02-n1
-    - zookeeper02-n2
-    - zookeeper02-n3
-    - zookeeper02-n4
-    - zookeeper02-n5
-
-
-
-
-
-  listenAddress: 127.0.0.1 # normally you wouldn't set this, but doing so for local demonstration purposes!
