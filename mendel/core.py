@@ -485,9 +485,9 @@ class Mendel(object):
                        -Dexec.args='${project.%s}'"
 
         print blue('Generating nexus URL')
-        project_version = local(mvn_command % ('version'), capture=True)
+        project_version = local(mvn_command % 'version', capture=True)
 
-        group_id = local(mvn_command % ('groupId'), capture=True)  
+        group_id = local(mvn_command % 'groupId', capture=True)
 
         group_id = re.sub('\.', '/', group_id)
 
