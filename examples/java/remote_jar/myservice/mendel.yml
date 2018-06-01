@@ -1,6 +1,6 @@
 service_name: myservice-remote_jar
 build_target_path: target/
-bundle_type: jar
+bundle_type: remote_jar
 project_type: java
 hosts:
   dev:
