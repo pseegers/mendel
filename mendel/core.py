@@ -123,7 +123,7 @@ class Mendel(object):
         self._build_target_path = build_target_path or 'target/%s' % self._service_name
         self._user = user or service_name
         self._group = group or user or service_name
-        self._bundle_type = bundle_type or 'jar'
+        self._bundle_type = bundle_type or 'remote_jar'
         self._project_type = project_type or 'java'
         self._cwd = cwd or '.'
         self._jar_name = jar_name or service_name
