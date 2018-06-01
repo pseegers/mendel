@@ -162,7 +162,7 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
     """
 
     def setUp(self):
-        nexus_hostname, nexus_docker_port = self.get_nexus_hostname_and_port()
+        nexus_hostname = self.get_nexus_hostname()
         self.curdir = os.path.dirname(os.path.abspath(__file__))
         self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'remote_jar', 'myservice')
         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
@@ -190,7 +190,7 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
         super(RemoteJarIntegrationTests, self).tearDown()
 
 
-    def get_nexus_hostname_and_port(self):
+    def get_nexus_hostname(self):
         print blue('Extracting nexus hostname...')
         client = docker.from_env()
         container_list = client.containers.list()
@@ -200,8 +200,6 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
                 container = container.__dict__
                 if container['attrs']['Config']['Image'] == 'sonatype/nexus:oss':
                     hostname = container['attrs']['NetworkSettings']['IPAddress']
-                    port = container['attrs']['NetworkSettings']['Ports']['8081/tcp'][0]['HostPort']
-                    print "{0}:{1}".format(hostname, port)
-                    return hostname, port
+                    return hostname
         else:
             raise Exception('No containers have been spun up')
