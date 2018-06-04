@@ -480,14 +480,13 @@ class Mendel(object):
         print blue("Grabbing MENDEL_NEXUS_REPOSITORY variable from your environment...")
         nexus_url = os.environ.get('MENDEL_NEXUS_REPOSITORY') # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/
 
-        mvn_command = "mvn -q -N org.codehaus.mojo:exec-maven-plugin:1.3.1:exec \
-                       -Dexec.executable='echo' \
-                       -Dexec.args='${project.%s}'"
+        parse_pom_command = """python -c 'from xml.etree.ElementTree import ElementTree; \
+                            print ElementTree(file="pom.xml").findtext("{http://maven.apache.org/POM/4.0.0}%s")'"""
 
         print blue('Generating nexus URL')
-        project_version = local(mvn_command % 'version', capture=True)
+        project_version = local(parse_pom_command % 'version', capture=True)
 
-        group_id = local(mvn_command % 'groupId', capture=True)
+        group_id = local(parse_pom_command % 'groupId', capture=True)
 
         group_id = re.sub('\.', '/', group_id)
 
