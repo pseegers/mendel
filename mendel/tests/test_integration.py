@@ -38,7 +38,7 @@ class IntegrationTestMixin(object):
         state.env.password = 'vagrant'
         state.env.host_string = 'localhost:%s' % self.ssh_port
 
-        if self.pom:
+        if self.bundle_type == 'remote_jar':
             self.update_project_version('0.0.6', '0.0.7')
 
         self.do_deploy()
@@ -48,7 +48,7 @@ class IntegrationTestMixin(object):
         # Emulate chef change to upstart config
         operations.sudo("sed -i 's/exec java -jar/exec java -Dchanged_config_line=true -jar/;' /etc/init/{0}.conf".format(self.service_name))
 
-        if self.pom:
+        if self.bundle_type == 'remote_jar':
             self.update_project_version('0.0.7', '0.0.8')
 
         self.do_deploy()
@@ -122,7 +122,7 @@ class TgzIntegrationTests(IntegrationTestMixin, TestCase):
         self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'tgz')
         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
         self.service_name = "myservice-tgz"
-        self.pom = None
+        self.bundle_type = 'tgz'
 
         super(TgzIntegrationTests, self).setUp()
 
@@ -144,7 +144,7 @@ class JarIntegrationTests(IntegrationTestMixin, TestCase):
         self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'jar')
         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
         self.service_name = "myservice-jar"
-        self.pom = None
+        self.bundle_type = 'jar'
 
         super(JarIntegrationTests, self).setUp()
 
@@ -163,6 +163,7 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
 
     def setUp(self):
         nexus_hostname = self.get_nexus_hostname()
+        self.bundle_type = 'remote_jar'
         self.curdir = os.path.dirname(os.path.abspath(__file__))
         self.workingdir = os.path.join(self.curdir, '..', '..', 'examples', 'java', 'remote_jar', 'myservice')
         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
