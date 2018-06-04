@@ -83,7 +83,8 @@ class IntegrationTestMixin(object):
         return status_code, content
 
     def update_project_version(self, old_version, new_version):
-        # Change the service's version because nexus does not accept same version deploys
+        """Change the service's version because nexus does not accept same version deploys"""
+
         with open(self.pom, 'r') as pom_file:
             text = pom_file.read()
 
