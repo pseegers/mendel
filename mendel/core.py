@@ -22,6 +22,8 @@ from mendel.conf import Config
 from mendel.util import lcd_task
 from mendel.util import str_to_bool
 
+from xml.etree.ElementTree import ElementTree
+
 config = Config()
 
 if getattr(env, '_already_built', None) is None:
@@ -480,13 +482,9 @@ class Mendel(object):
         print blue("Grabbing MENDEL_NEXUS_REPOSITORY variable from your environment...")
         nexus_url = os.environ.get('MENDEL_NEXUS_REPOSITORY') # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/
 
-        parse_pom_command = """python -c 'from xml.etree.ElementTree import ElementTree; \
-                            print ElementTree(file="pom.xml").findtext("{http://maven.apache.org/POM/4.0.0}%s")'"""
-
-        print blue('Generating nexus URL')
-        project_version = local(parse_pom_command % 'version', capture=True)
-
-        group_id = local(parse_pom_command % 'groupId', capture=True)
+        elem_tree = ElementTree(file=os.path.join(self._cwd, "pom.xml"))
+        project_version = elem_tree.findtext("{http://maven.apache.org/POM/4.0.0}version")
+        group_id = elem_tree.findtext("{http://maven.apache.org/POM/4.0.0}groupId")
 
         group_id = re.sub('\.', '/', group_id)
 
@@ -510,7 +508,6 @@ class Mendel(object):
         self._create_if_missing(self._rpath('releases', release_dir))
 
         with cd(self._rpath('releases', release_dir)):
-            print blue('Downloading jar from nexus server')
             sudo('wget %s' % (nexus_url))
 
             # rename versioned jar to normal service jar
