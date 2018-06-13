@@ -6,7 +6,6 @@ import os
 import sys
 import urllib2
 import re
-import time
 
 import requests
 from debian import deb822
@@ -28,6 +27,9 @@ config = Config()
 
 if getattr(env, '_already_built', None) is None:
     env._already_built = False
+
+if getattr(env, '_already_deployed', None) is None:
+    env._already_deployed = False
 
 ###############################################################################
 # TODO - add example services in python, demonstrate crons can
@@ -255,8 +257,18 @@ class Mendel(object):
         """
         env._already_built = True
 
+    def _mark_as_deployed(self):
+        """
+        So we don't upload the same project version to nexus for each
+        target host. That would fail anyway.
+        """
+        env._already_deployed = True
+
     def _is_already_built(self):
         return env._already_built
+
+    def _is_already_deployed(self):
+        return env._already_deployed
 
     def _get_bundle_name(self):
         try:
@@ -479,8 +491,9 @@ class Mendel(object):
             raise Exception("Unsupported project type: %s" % self._project_type)
 
     def _upload_remote_jar(self, jar_name):
-        print blue("Grabbing MENDEL_NEXUS_REPOSITORY variable from your environment...")
-        nexus_url = os.environ.get('MENDEL_NEXUS_REPOSITORY') # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/
+
+        nexus_url = os.environ.get(
+            'MENDEL_NEXUS_REPOSITORY')  # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/
 
         elem_tree = ElementTree(file=os.path.join(self._cwd, "pom.xml"))
         project_version = elem_tree.findtext("{http://maven.apache.org/POM/4.0.0}version")
@@ -497,11 +510,15 @@ class Mendel(object):
         nexus_url += '/'
         nexus_url += '{0}-{1}.jar'.format(self._service_name, project_version)
 
-        if self._project_type == "java":
-            print blue('Pushing jar to nexus server')
-            local('mvn deploy')
-        else:
-            raise Exception("Unsupported project type: %s" % self._project_type)
+        if not self._is_already_deployed():
+            print blue("Grabbing MENDEL_NEXUS_REPOSITORY variable from your environment...")
+
+            if self._project_type == "java":
+                print blue('Pushing jar to nexus server')
+                local('mvn deploy')
+                self._mark_as_deployed()
+            else:
+                raise Exception("Unsupported project type: %s" % self._project_type)
 
         self._create_if_missing(self._rpath('releases'))
         release_dir = self._new_release_dir()
