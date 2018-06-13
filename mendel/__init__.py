@@ -90,7 +90,7 @@ if not is_running_tests():
         for key, host_string in config.get('hosts', {}).items():
             vars()[key] = create_host_task(key, host_string)
     except ConfigMissingError as e:
-        if 'fab' in sys.argv:
+        if any(arg.endswith('fab') for arg in sys.argv):
             # mendel is being used as a lib for fab, so we don't need a config
             pass
         elif len(sys.argv) >= 2 and ('mendel' in sys.argv[0] and 'init' in sys.argv[1]):
