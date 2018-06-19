@@ -251,6 +251,14 @@ class Mendel(object):
             self._release_dir = '%s-%s-%s' % release_dir_args
         return self._release_dir
 
+    def _is_already_in_nexus(self):
+        print blue("Checking to see if artifact is already in nexus")
+        if self._bundle_type == "remote_jar":
+            nexus_url = self._generate_nexus_url()
+            r = local('wget %s' % nexus_url)
+            return r.succeeded
+        return False
+
     def _mark_as_built(self):
         """
         so we dont build multiple times for each host we're deploying too.
@@ -266,10 +274,10 @@ class Mendel(object):
         env._already_deployed = True
 
     def _is_already_built(self):
-        return env._already_built
+        return env._already_built or self._is_already_in_nexus()
 
     def _is_already_deployed(self):
-        return env._already_deployed
+        return env._already_deployed or self._is_already_in_nexus()
 
     def _get_bundle_name(self):
         try:
