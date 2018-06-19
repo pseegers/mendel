@@ -247,8 +247,9 @@ class Mendel(object):
         could make this less brittle. having CI would be even better but we're not there yet.
         """
         if self._release_dir is None:
-            release_dir_args = (datetime.utcnow().strftime('%Y%m%d-%H%M%S'), getpass.getuser(), self._get_commit_hash())
-            self._release_dir = '%s-%s-%s' % release_dir_args
+            release_dir_args = (datetime.utcnow().strftime('%Y%m%d-%H%M%S'), getpass.getuser(), self._get_commit_hash(),
+                                self.project_version)
+            self._release_dir = '%s-%s-%s-%s' % release_dir_args
         return self._release_dir
 
     def _is_already_in_nexus(self):
