@@ -435,7 +435,19 @@ class Mendel(object):
 
     def _install_remote_jar(self, jar_name):
         release_dir = self._new_release_dir()
+        nexus_url = self._generate_nexus_url()
 
+        with cd(self._rpath('releases', release_dir)):
+            sudo('wget %s' % (nexus_url))
+
+            # rename versioned jar to normal service jar
+            sudo('mv *.jar %s.jar' % (self._service_name))
+
+            sudo('chown %s:%s %s' % (self._user, self._group, jar_name or self._service_name + '.jar'))
+            self._change_symlink_to(self._rpath('releases', release_dir))
+
+    def _generate_nexus_url(self):
+        """ Generates nexus URL for artifact download """
         nexus_url = self._nexus_repository
 
         elem_tree = ElementTree(file=os.path.join(self._cwd, "pom.xml"))
@@ -453,15 +465,7 @@ class Mendel(object):
         nexus_url += '/'
         nexus_url += '{0}-{1}.jar'.format(self._service_name, self.project_version)
 
-        with cd(self._rpath('releases', release_dir)):
-            sudo('wget %s' % (nexus_url))
-
-            # rename versioned jar to normal service jar
-            sudo('mv *.jar %s.jar' % (self._service_name))
-
-            sudo('chown %s:%s %s' % (self._user, self._group, jar_name or self._service_name + '.jar'))
-            self._change_symlink_to(self._rpath('releases', release_dir))
-
+        return nexus_url
 
     def _backup_current_release(self):
         """
