@@ -169,7 +169,7 @@ class Mendel(object):
             self._upload = self._upload_jar
             self._rollback = self._symlink_rollback
         elif bundle_type == 'remote_jar':
-            self._install = self._install_jar
+            self._install = self._install_remote_jar
             self._upload = self._upload_remote_jar
             self._rollback = self._symlink_rollback
         elif bundle_type == 'remote_deb':
@@ -432,6 +432,38 @@ class Mendel(object):
             sudo('chown %s:%s %s' % (self._user, self._group, jar_name or self._service_name + '.jar'))
             self._change_symlink_to(self._rpath('releases', release_dir))
 
+    def _install_remote_jar(self, jar_name):
+        release_dir = self._new_release_dir()
+
+        nexus_url = os.environ.get(
+            'MENDEL_NEXUS_REPOSITORY')  # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/
+
+        elem_tree = ElementTree(file=os.path.join(self._cwd, "pom.xml"))
+        project_version = elem_tree.findtext("{http://maven.apache.org/POM/4.0.0}version")
+        group_id = elem_tree.findtext("{http://maven.apache.org/POM/4.0.0}groupId")
+
+        group_id = re.sub('\.', '/', group_id)
+
+        nexus_url += group_id
+        nexus_url += '/'
+        nexus_url += self._service_name
+
+        nexus_url += '/'
+        nexus_url += project_version
+        nexus_url += '/'
+        nexus_url += '{0}-{1}.jar'.format(self._service_name, project_version)
+
+        with cd(self._rpath('releases', release_dir)):
+            sudo('wget %s' % (nexus_url))
+
+            # rename versioned jar to normal service jar
+            sudo('mv *.jar %s.jar' % (self._service_name))
+
+            sudo('chown %s:%s %s' % (self._user, self._group, jar_name or self._service_name + '.jar'))
+            self._change_symlink_to(self._rpath('releases', release_dir))
+
+
+
     def _backup_current_release(self):
         """
 
@@ -492,24 +524,6 @@ class Mendel(object):
 
     def _upload_remote_jar(self, jar_name):
 
-        nexus_url = os.environ.get(
-            'MENDEL_NEXUS_REPOSITORY')  # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/
-
-        elem_tree = ElementTree(file=os.path.join(self._cwd, "pom.xml"))
-        project_version = elem_tree.findtext("{http://maven.apache.org/POM/4.0.0}version")
-        group_id = elem_tree.findtext("{http://maven.apache.org/POM/4.0.0}groupId")
-
-        group_id = re.sub('\.', '/', group_id)
-
-        nexus_url += group_id
-        nexus_url += '/'
-        nexus_url += self._service_name
-
-        nexus_url += '/'
-        nexus_url += project_version
-        nexus_url += '/'
-        nexus_url += '{0}-{1}.jar'.format(self._service_name, project_version)
-
         if not self._is_already_deployed():
             print blue("Grabbing MENDEL_NEXUS_REPOSITORY variable from your environment...")
 
@@ -523,12 +537,6 @@ class Mendel(object):
         self._create_if_missing(self._rpath('releases'))
         release_dir = self._new_release_dir()
         self._create_if_missing(self._rpath('releases', release_dir))
-
-        with cd(self._rpath('releases', release_dir)):
-            sudo('wget %s' % (nexus_url))
-
-            # rename versioned jar to normal service jar
-            sudo('mv *.jar %s.jar' % (self._service_name))
 
         return release_dir
 

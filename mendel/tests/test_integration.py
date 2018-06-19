@@ -9,7 +9,7 @@ from subprocess import PIPE
 from subprocess import Popen
 from unittest import TestCase
 
-from fabric.colors import blue
+from fabric.colors import blue, green
 
 MENDEL_TEST_FILE = 'mendel.test.yml'
 
@@ -98,11 +98,11 @@ class IntegrationTestMixin(object):
         os.remove(os.path.join(self.workingdir, MENDEL_TEST_FILE))
         state.env.user = 'vagrant'
         state.env.password = 'vagrant'
-        print "User and password have been assigned"
+        print blue("User and password have been assigned")
         state.env.host_string = 'localhost:%s' % self.ssh_port
-        print "host has been assigned. Now stopping service"
-        operations.sudo("service {0} stop".format(self.service_name))
-        print "Service has been stopped."
+        print blue("host has been assigned. Now stopping service")
+        operations.sudo("service {0} stop".format(self.service_name), warn_only=True)
+        print green("Service has been stopped.")
         super(IntegrationTestMixin, self).tearDown()
 
 
@@ -127,6 +127,7 @@ class TgzIntegrationTests(IntegrationTestMixin, TestCase):
 
         super(TgzIntegrationTests, self).setUp()
 
+
 class JarIntegrationTests(IntegrationTestMixin, TestCase):
 
     MENDEL_YAML = """
@@ -148,6 +149,7 @@ class JarIntegrationTests(IntegrationTestMixin, TestCase):
         self.bundle_type = 'jar'
 
         super(JarIntegrationTests, self).setUp()
+
 
 class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
 
@@ -191,8 +193,8 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
         os.remove(os.path.join(self.pom))
         super(RemoteJarIntegrationTests, self).tearDown()
 
-
-    def get_nexus_hostname(self):
+    @staticmethod
+    def get_nexus_hostname():
         print blue('Extracting nexus hostname...')
         client = docker.from_env()
         container_list = client.containers.list()
