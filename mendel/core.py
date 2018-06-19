@@ -145,6 +145,7 @@ class Mendel(object):
         self._slack_url = slack_url
         self._slack_emoji = slack_emoji
         self._track_event_endpoint = config.TRACK_EVENT_ENDPOINT
+        self.project_version = ''
         if isinstance(use_upstart, basestring):
             self._use_upstart = str_to_bool(use_upstart)
         else:
@@ -435,11 +436,10 @@ class Mendel(object):
     def _install_remote_jar(self, jar_name):
         release_dir = self._new_release_dir()
 
-        nexus_url = os.environ.get(
-            'MENDEL_NEXUS_REPOSITORY')  # http://nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/
+        nexus_url = self._nexus_repository
 
         elem_tree = ElementTree(file=os.path.join(self._cwd, "pom.xml"))
-        project_version = elem_tree.findtext("{http://maven.apache.org/POM/4.0.0}version")
+        self.project_version = elem_tree.findtext("{http://maven.apache.org/POM/4.0.0}version")
         group_id = elem_tree.findtext("{http://maven.apache.org/POM/4.0.0}groupId")
 
         group_id = re.sub('\.', '/', group_id)
@@ -449,9 +449,9 @@ class Mendel(object):
         nexus_url += self._service_name
 
         nexus_url += '/'
-        nexus_url += project_version
+        nexus_url += self.project_version
         nexus_url += '/'
-        nexus_url += '{0}-{1}.jar'.format(self._service_name, project_version)
+        nexus_url += '{0}-{1}.jar'.format(self._service_name, self.project_version)
 
         with cd(self._rpath('releases', release_dir)):
             sudo('wget %s' % (nexus_url))
@@ -461,7 +461,6 @@ class Mendel(object):
 
             sudo('chown %s:%s %s' % (self._user, self._group, jar_name or self._service_name + '.jar'))
             self._change_symlink_to(self._rpath('releases', release_dir))
-
 
 
     def _backup_current_release(self):
@@ -792,13 +791,12 @@ class Mendel(object):
         url = 'http://%s/events/' % self._graphite_host
 
         user = getpass.getuser()
-        what = '%s %s %s on host %s' % (user, event, self._service_name, env.host_string)
+        what = '%s %s %s version %s on host %s' % (user, event, self._service_name, self.project_version, env.host_string)
         data = ''
         tags = [str(s) for s in (self._service_name, event)]
-
-        data = {'what': what, 'tags': tags, 'data': data}
+        post_data = {'what': what, 'tags': tags, 'data': data}
         try:
-            r = urllib2.urlopen(url, json.dumps(data), timeout=3)
+            r = urllib2.urlopen(url, json.dumps(post_data), timeout=5)
         except Exception as e:
             print red('Error while tracking deployment event in graphite: %s' % str(e))
             return
@@ -806,7 +804,7 @@ class Mendel(object):
         if r.code != 200:
             print red('Unable to track deployment event in graphite (HTTP %s)' % r.code)
         else:
-            print cyan('Tracked deploy in graphite (data=%s' % json.dumps(data))
+            print cyan('Tracked deploy in graphite (data=%s' % json.dumps(post_data))
 
     def _track_event_api(self, event):
         """
