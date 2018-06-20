@@ -255,15 +255,17 @@ class Mendel(object):
         return self._release_dir
 
     def _is_already_in_nexus(self):
-        print blue("Checking to see if artifact is already in nexus")
         if self._bundle_type == 'remote_jar':
             nexus_url = self._generate_nexus_url()
 
-            try:
-                r = urllib2.urlopen(nexus_url)
-                return r.code == 200
-            except Exception:
-                return False
+            curl_output = run('curl -s -o /dev/null -w "%{http_code}" ' + nexus_url)
+
+            if curl_output.strip() == '200':
+                print green('Already found artifact in nexus. Skipping build and upload phases...')
+                return True
+            else:
+                print blue('Artifact not found in nexus. Building locally...')
+
         return False
 
     def _mark_as_built(self):
@@ -282,6 +284,7 @@ class Mendel(object):
 
     def _is_already_built(self):
         return env._already_built or self._is_already_in_nexus()
+
 
     def _is_already_deployed(self):
         return env._already_deployed or self._is_already_in_nexus()
