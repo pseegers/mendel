@@ -256,7 +256,7 @@ class Mendel(object):
 
     def _is_already_in_nexus(self):
         print blue("Checking to see if artifact is already in nexus")
-        if self._bundle_type == "remote_jar":
+        if self._bundle_type == 'remote_jar':
             nexus_url = self._generate_nexus_url()
 
             try:
