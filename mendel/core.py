@@ -546,8 +546,6 @@ class Mendel(object):
     def _upload_remote_jar(self, jar_name):
 
         if not self._is_already_deployed():
-            print blue("Grabbing MENDEL_NEXUS_REPOSITORY variable from your environment...")
-
             if self._project_type == "java":
                 print blue('Pushing jar to nexus server')
                 local('mvn deploy')
