@@ -247,17 +247,19 @@ class Mendel(object):
         could make this less brittle. having CI would be even better but we're not there yet.
         """
         if self._release_dir is None:
-            release_dir_args = (datetime.utcnow().strftime('%Y%m%d-%H%M%S'), getpass.getuser(), self._get_commit_hash(),
-                                self.project_version)
-            self._release_dir = '%s-%s-%s-%s' % release_dir_args
+            release_dir_args = (datetime.utcnow().strftime('%Y%m%d-%H%M%S'), getpass.getuser(), self._get_commit_hash())
+            self._release_dir = '%s-%s-%s' % release_dir_args
+
+            if self._bundle_type == 'remote_jar':
+                self._release_dir = self._release_dir + '-' + self.project_version
         return self._release_dir
 
     def _is_already_in_nexus(self):
         print blue("Checking to see if artifact is already in nexus")
         if self._bundle_type == "remote_jar":
             nexus_url = self._generate_nexus_url()
-            r = local('wget %s' % nexus_url)
-            return r.succeeded
+            r = urllib2.urlopen(nexus_url)
+            return r.code == 200
         return False
 
     def _mark_as_built(self):
