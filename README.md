@@ -22,7 +22,7 @@ get it!
 
 ##### install
 ```
-sudo pip install fabric-mendel==0.6.10
+sudo pip install fabric-mendel==0.8.0
 ```
 
 ##### configure deployment tracking
