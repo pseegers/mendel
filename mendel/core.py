@@ -452,8 +452,11 @@ class Mendel(object):
             self._change_symlink_to(self._rpath('releases', release_dir))
 
     def _install_remote_jar(self, jar_name):
-        release_dir = self._new_release_dir()
         nexus_url = self._generate_nexus_url()
+
+        self._create_if_missing(self._rpath('releases'))
+        release_dir = self._new_release_dir()
+        self._create_if_missing(self._rpath('releases', release_dir))
 
         with cd(self._rpath('releases', release_dir)):
             sudo('wget %s' % (nexus_url))
