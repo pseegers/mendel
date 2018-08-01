@@ -462,9 +462,9 @@ class Mendel(object):
             sudo('wget %s' % (nexus_url))
 
             # rename versioned jar to normal service jar
-            sudo('mv *.jar %s.jar' % (self._service_name))
+            sudo('mv *.jar %s.jar' % (self._jar_name or self._service_name))
 
-            sudo('chown %s:%s %s' % (self._user, self._group, jar_name or self._service_name + '.jar'))
+            sudo('chown %s:%s %s' % (self._user, self._group, (self._jar_name  or self._service_name) + '.jar'))
             self._change_symlink_to(self._rpath('releases', release_dir))
 
     def _generate_nexus_url(self):
