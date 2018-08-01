@@ -479,12 +479,12 @@ class Mendel(object):
 
         nexus_url += group_id
         nexus_url += '/'
-        nexus_url += self._service_name
+        nexus_url += self._jar_name or self._service_name
 
         nexus_url += '/'
         nexus_url += self.project_version
         nexus_url += '/'
-        nexus_url += '{0}-{1}.jar'.format(self._service_name, self.project_version)
+        nexus_url += '{0}-{1}.jar'.format(self._jar_name or self._service_name, self.project_version)
 
         return nexus_url
 
