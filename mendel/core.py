@@ -448,7 +448,7 @@ class Mendel(object):
         release_dir = self._new_release_dir()
 
         with cd(self._rpath('releases', release_dir)):
-            sudo('chown %s:%s %s' % (self._user, self._group, jar_name or self._service_name + '.jar'))
+            sudo('chown %s:%s %s' % (self._user, self._group, self._jar_name + '.jar'))
             self._change_symlink_to(self._rpath('releases', release_dir))
 
     def _install_remote_jar(self, jar_name):
@@ -462,9 +462,9 @@ class Mendel(object):
             sudo('wget %s' % (nexus_url))
 
             # rename versioned jar to normal service jar
-            sudo('mv *.jar %s.jar' % (self._service_name))
+            sudo('mv *.jar %s.jar' % self._jar_name)
 
-            sudo('chown %s:%s %s' % (self._user, self._group, jar_name or self._service_name + '.jar'))
+            sudo('chown %s:%s %s' % (self._user, self._group, self._jar_name + '.jar'))
             self._change_symlink_to(self._rpath('releases', release_dir))
 
     def _generate_nexus_url(self):
@@ -479,12 +479,12 @@ class Mendel(object):
 
         nexus_url += group_id
         nexus_url += '/'
-        nexus_url += self._service_name
+        nexus_url += self._jar_name
 
         nexus_url += '/'
         nexus_url += self.project_version
         nexus_url += '/'
-        nexus_url += '{0}-{1}.jar'.format(self._service_name, self.project_version)
+        nexus_url += '{0}-{1}.jar'.format(self._jar_name, self.project_version)
 
         return nexus_url
 
