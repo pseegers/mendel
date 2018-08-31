@@ -24,6 +24,7 @@ class IntegrationTestMixin(object):
             filecontents = self.MENDEL_YAML % self.ssh_port
             print filecontents
             f.write(filecontents)
+        os.environ['MENDEL_GRAPHITE_HOST'] = 'www.google.com'
         super(IntegrationTestMixin, self).setUp()
 
     def test_mendel_deploy(self):

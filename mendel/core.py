@@ -761,6 +761,17 @@ class Mendel(object):
         if self._missing_hosts():
             print red("error: you didnt specify any hosts with -H")
             sys.exit(1)
+
+        curl_output = run('curl -s -o /dev/null -w "%{http_code}" ' + str(self._graphite_host))
+
+        if curl_output.strip() == '200':
+            print green('Graphite host is present in mendel configuration and responsive')
+            print blue('Proceeding with deployment...')
+        else:
+            print red('Graphite host is not present in mendel configuration or is not responsive')
+            print red('Aborting deployment')
+            sys.exit(1)
+
         self.build()
         self.upload()
         self.install()
@@ -821,8 +832,12 @@ class Mendel(object):
         try:
             r = urllib2.urlopen(url, json.dumps(post_data), timeout=5)
         except Exception as e:
-            print red('Error while tracking deployment event in graphite: %s' % str(e))
-            return
+            # try one more time
+            try:
+                r = urllib2.urlopen(url, json.dumps(post_data), timeout=5)
+            except:
+                print red('Error while tracking deployment event in graphite: %s' % str(e))
+                return
 
         if r.code != 200:
             print red('Unable to track deployment event in graphite (HTTP %s)' % r.code)
