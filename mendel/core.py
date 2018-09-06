@@ -235,8 +235,7 @@ class Mendel(object):
             raise Exception("Unsupported version control: %s", self._version_control)
 
         if commithash.failed or commithash.strip() == '':
-            print red("failed to obtain commit hash. are you in a mercurial repo? i don't support git yet, sorry, issue a PR")
-            sys.exit(1)
+            self._log_error_and_exit("failed to obtain commit hash. are you in a mercurial repo? i don't support mercurial yet, sorry, issue a PR")
         return commithash.strip()
 
     def _new_release_dir(self):
@@ -589,8 +588,7 @@ class Mendel(object):
         with hide('status', 'running', 'stdout'):
             all_releases = self._get_all_releases()
             if len(all_releases) <= 1:
-                print red('Only 1 release available, nothing to rollback to :(')
-                sys.exit(1)
+                self._log_error_and_exit('Only 1 release available, nothing to rollback to :(')
 
             curr_index = self._display_releases_for_rollback_selection(
                 all_releases,
@@ -613,8 +611,7 @@ class Mendel(object):
         # validate nexus settings are configured first
         for suffix in ('host', 'port', 'user', 'repository'):
             if not getattr(self, '_nexus_%s' % suffix):
-                print red('~/.mendel.conf is missing %s in [nexus] configuration section' % suffix)
-                sys.exit(1)
+                self._log_error_and_exit('~/.mendel.conf is missing %s in [nexus] configuration section' % suffix)
 
         url_for_debug = (
                 'http://%(nexus_host)s:%(nexus_port)s'
@@ -734,8 +731,7 @@ class Mendel(object):
         try:
             bundle_file = self._get_bundle_name()
         except Exception as e:
-            print red(e.message)
-            sys.exit(1)
+            self._log_error_and_exit(e.message)
 
         dest = self._upload(bundle_file)
         if bundle_file:
@@ -748,8 +744,7 @@ class Mendel(object):
         try:
             bundle_file = self._get_bundle_name()
         except Exception as e:
-            print red(e.message)
-            sys.exit(1)
+            self._log_error_and_exit(e.message)
 
         self._install(bundle_file)
         print green('Successfully installed new release of %s service' % self._service_name)
@@ -759,8 +754,7 @@ class Mendel(object):
         [core]\t\tbuilds, installs, and deploys to all the specified hosts
         """
         if self._missing_hosts():
-            print red("error: you didnt specify any hosts with -H")
-            sys.exit(1)
+            self._log_error_and_exit("error: you didnt specify any hosts with -H")
 
         curl_output = run('curl -s -o /dev/null -w "%{http_code}" ' + str(self._graphite_host))
 
@@ -768,9 +762,7 @@ class Mendel(object):
             print green('Graphite host is present in mendel configuration and responsive')
             print blue('Proceeding with deployment...')
         else:
-            print red('Graphite host is not present in mendel configuration or is not responsive')
-            print red('Aborting deployment')
-            sys.exit(1)
+            self._log_error_and_exit('Graphite host is not present in mendel configuration or is not responsive')
 
         self.build()
         self.upload()
@@ -805,14 +797,19 @@ class Mendel(object):
         [core]\t\twatch the logs
         """
         if len(env.hosts) > 1:
-            print red("can only tail logs on one host at a time")
-            sys.exit(1)
+            self._log_error_and_exit("can only tail logs on one host at a time")
         sudo('tail -f /var/log/%s/%s' % (self._service_name, log_name), user=self._user, group=self._group)
 
     def _track_event(self, event):
         self._track_event_graphite(event)
         self._track_event_api(event)
         self._track_event_slack(event)
+
+    def _log_error_and_exit(self, message):
+        print red(message)
+        print red('Aborting deployment')
+        self._track_event_slack(message, True)
+        sys.exit(1)
 
     def _track_event_graphite(self, event):
         """
@@ -865,16 +862,19 @@ class Mendel(object):
         if r.status_code != 200:
             print red('Unable to track deployment event to the external API (HTTP %s)' % r.status_code)
 
-    def _track_event_slack(self, event):
+    def _track_event_slack(self, event, failure=False):
         """
         Notify Slack that a mendel event has taken place
         """
-        text = "%s %s %s @ %s to host(s) %s" % (getpass.getuser(), event, self._service_name, self._get_commit_hash(), env.host_string)
         if self._slack_url is not None:
+            if failure:
+                text = "*DEPLOY FAILED FOR* %s %s @ %s to host(s) %s with error %s *ABORTING DEPLOY*" % (getpass.getuser(), self._service_name, self._get_commit_hash(), env.host_string, event)
+            else:
+                text = "%s *s* %s @ %s to host(s) %s" % (getpass.getuser(), event.upper(), self._service_name, self._get_commit_hash(), env.host_string)
             params = {
                 'username': 'Mendel',
                 'text': text,
-                'icon_emoji': self._slack_emoji
+                'icon_emoji': ":rotating_light:" if failure else self._slack_emoji
             }
             req = urllib2.Request(self._slack_url, json.dumps(params))
             urllib2.urlopen(req)
