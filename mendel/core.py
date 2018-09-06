@@ -870,7 +870,7 @@ class Mendel(object):
             if failure:
                 text = "*DEPLOY FAILED FOR* %s %s @ %s to host(s) %s with error %s *ABORTING DEPLOY*" % (getpass.getuser(), self._service_name, self._get_commit_hash(), env.host_string, event)
             else:
-                text = "%s *s* %s @ %s to host(s) %s" % (getpass.getuser(), event.upper(), self._service_name, self._get_commit_hash(), env.host_string)
+                text = "%s *%s* %s @ %s to host(s) %s" % (getpass.getuser(), event.upper(), self._service_name, self._get_commit_hash(), env.host_string)
             params = {
                 'username': 'Mendel',
                 'text': text,
