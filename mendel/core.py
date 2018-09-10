@@ -686,7 +686,7 @@ class Mendel(object):
                 validate=validator
             )
             self._apt_install_remote_deb(version=rollback_to)
-        self._track_event('rolledbacked')
+        self._track_event('rolledback')
 
     ############################################################################
     # Deploy Tasks
@@ -781,7 +781,7 @@ class Mendel(object):
         [core]\t\tchoose a version to rollback to from all available releases
         """
         self._rollback()
-        self._track_event('rollbacked')
+        self._track_event('rolledback')
 
     def upstart(self, cmd, print_output=True):
         """
