@@ -686,7 +686,7 @@ class Mendel(object):
                 validate=validator
             )
             self._apt_install_remote_deb(version=rollback_to)
-        self._track_event('rolledback')
+        self._track_event('rolledbacked')
 
     ############################################################################
     # Deploy Tasks
@@ -714,7 +714,7 @@ class Mendel(object):
             else:
                 raise Exception("Unsupported project type: %s" % self._project_type)
             self._mark_as_built()
-        self._track_event('build')
+        self._track_event('built')
 
 
     def link_latest_release(self):
@@ -725,7 +725,7 @@ class Mendel(object):
             release_dir = self._get_latest_release()
         print green("Linking release %s into current" % magenta(release_dir))
         self._change_symlink_to(self._rpath('releases', release_dir))
-        self._track_event('link latest')
+        self._track_event('linked latest')
 
 
     def upload(self):
@@ -740,7 +740,7 @@ class Mendel(object):
         dest = self._upload(bundle_file)
         if bundle_file:
             print green('Uploaded new release of %s to %s' % (bundle_file, dest))
-        self._track_event('upload')
+        self._track_event('uploaded')
 
     def install(self):
         """
@@ -781,7 +781,7 @@ class Mendel(object):
         [core]\t\tchoose a version to rollback to from all available releases
         """
         self._rollback()
-        self._track_event('rollback')
+        self._track_event('rollbacked')
 
     def upstart(self, cmd, print_output=True):
         """
@@ -798,7 +798,7 @@ class Mendel(object):
             if print_output:
                 print green(out)
             return out
-        self._track_event('upstart')
+        self._track_event('upstarted')
 
     def tail(self, log_name="output.log"):
         """
