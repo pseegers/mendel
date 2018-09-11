@@ -866,9 +866,12 @@ class Mendel(object):
 
         url = 'http://%s' % self._track_event_endpoint
 
-        r = requests.post(url, data)
-        if r.status_code != 200:
-            print red('Unable to track deployment event to the external API (HTTP %s)' % r.status_code)
+        try:
+            r = requests.post(url, data)
+            if r.status_code != 200:
+                print red('Unable to track deployment event to the external API (HTTP %s)' % r.status_code)
+        except Exception as e:
+            print red("Could not track event api with url %s got error %s" % (url, e))
 
     def _track_event_slack(self, event, failure=False):
         """
@@ -887,7 +890,7 @@ class Mendel(object):
             req = urllib2.Request(self._slack_url, json.dumps(params))
             urllib2.urlopen(req)
         else:
-            print 'No slack_url found skipping slack notification: [%s]' % text
+            print 'No slack_url found skipping slack notification'
 
     def get_tasks(self):
         return [
