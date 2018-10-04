@@ -219,7 +219,7 @@ class Mendel(object):
         with cd(self._rpath()):
             sudo('ln -sfT %s current' % release_path, user=self._user, group=self._group)
 
-    def _get_commit_hash(self):
+    def _get_commit_hash(self, shorten=False):
         """
         Obtain commit hash that the repository is currently at, so we can tag the release dir with it as well
         as report the commit hash of what's deployed. Note that this is not the "latest" commit intentionally, it is the
@@ -230,7 +230,10 @@ class Mendel(object):
         if self._version_control is "hg":
             commithash = local('hg id -i', capture=True)
         elif self._version_control is "git":
-            commithash = local('git rev-parse HEAD', capture=True)
+            if shorten:
+                commithash = local('git rev-parse --short=7 HEAD', capture=True)
+            else:
+                commithash = local('git rev-parse HEAD', capture=True)
         else:
             raise Exception("Unsupported version control: %s", self._version_control)
 
@@ -879,9 +882,9 @@ class Mendel(object):
         """
         if self._slack_url is not None:
             if failure:
-                text = "*DEPLOY FAILED FOR* %s %s @ %s to host(s) %s with error %s *ABORTING DEPLOY*" % (getpass.getuser(), self._service_name, self._get_commit_hash(), env.host_string, event)
+                text = "*DEPLOY FAILED FOR* %s %s @ %s, version *%s* to host(s) %s with error %s *ABORTING DEPLOY*" % (getpass.getuser(), self._service_name, self._get_commit_hash(shorten=True), self.project_version, env.host_string, event)
             else:
-                text = "%s *%s* %s @ %s to host(s) %s" % (getpass.getuser(), event.upper(), self._service_name, self._get_commit_hash(), env.host_string)
+                text = "%s *%s* %s @ %s, version *%s* to host(s) %s" % (getpass.getuser(), event.upper(), self._service_name, self._get_commit_hash(shorten=True), self.project_version, env.host_string)
             params = {
                 'username': 'Mendel',
                 'text': text,
