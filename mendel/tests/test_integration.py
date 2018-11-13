@@ -5,8 +5,7 @@ import time
 import re
 from fabric import state
 from fabric import operations
-from subprocess import PIPE
-from subprocess import Popen
+from subprocess import PIPE, Popen, call
 from unittest import TestCase
 
 from fabric.colors import blue, green
@@ -55,9 +54,12 @@ class IntegrationTestMixin(object):
         self.do_deploy()
         config_status = operations.run("ps aux | grep {0} | grep changed_config | grep -v grep".format(self.service_name))
         self.assertTrue(config_status.succeeded)
-        
-    def do_deploy(self):
-        cmdline = 'mendel -f %s dev deploy' % MENDEL_TEST_FILE
+
+    def do_deploy(self, version=None):
+        if version:
+            cmdline = 'mendel -f %s dev deploy:%s' % (MENDEL_TEST_FILE, version)
+        else:
+            cmdline = 'mendel -f %s dev deploy' % MENDEL_TEST_FILE
         print cmdline
         p = Popen(cmdline, stdout=PIPE, stderr=PIPE, shell=True, cwd=self.workingdir)
         out, err = p.communicate()
@@ -188,11 +190,49 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
             filecontents = re.sub(self.old_url, self.nexus_url, text)
             pom_file.write(filecontents)
 
+        # Wait for nexus to come up
+        status_code = False
+        for retries in range(0, 10):
+            try:
+                r = urllib2.urlopen(self.nexus_url)
+                content = r.read()
+                status_code = r.getcode()
+
+            except:
+                pass
+
+            if (status_code != 200):
+                print "Waiting for nexus"
+                time.sleep(2)
+
         super(RemoteJarIntegrationTests, self).setUp()
 
     def tearDown(self):
         os.remove(os.path.join(self.pom))
         super(RemoteJarIntegrationTests, self).tearDown()
+
+    def test_specific_version(self):
+        state.env.user = 'vagrant'
+        state.env.password = 'vagrant'
+        state.env.host_string = 'localhost:%s' % self.ssh_port
+
+        # Make versions avaliable in nexus
+        self.update_project_version('0.0.6', '0.0.9')
+        call('mvn deploy', shell=True, cwd=self.workingdir)
+
+        self.update_project_version('0.0.9', '0.0.10')
+        call('mvn deploy', shell=True, cwd=self.workingdir)
+        self.update_project_version('0.0.10', '0.0.11')
+
+        # Deploy a specific version (no latest)
+        self.do_deploy('0.0.9')
+        config_status = operations.run("ls -al /srv/myservice-remote_jar/current | grep {0} | grep -v grep".format('0.0.9'))
+        self.assertTrue(config_status.succeeded)
+
+        # Deploy the latest from Nexus
+        self.do_deploy('nexus.latest')
+        config_status = operations.run("ls -al /srv/myservice-remote_jar/current | grep {0} | grep -v grep".format('0.0.10'))
+        self.assertTrue(config_status.succeeded)
 
     @staticmethod
     def get_nexus_hostname():

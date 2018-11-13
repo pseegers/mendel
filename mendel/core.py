@@ -21,7 +21,7 @@ from mendel.conf import Config
 from mendel.util import lcd_task
 from mendel.util import str_to_bool
 
-from xml.etree.ElementTree import ElementTree
+from xml.etree.ElementTree import ElementTree, fromstring
 
 config = Config()
 
@@ -146,6 +146,7 @@ class Mendel(object):
         self._slack_emoji = slack_emoji
         self._track_event_endpoint = config.TRACK_EVENT_ENDPOINT
         self.project_version = ''
+        self._project_version_specified = False
         if isinstance(use_upstart, basestring):
             self._use_upstart = str_to_bool(use_upstart)
         else:
@@ -471,10 +472,22 @@ class Mendel(object):
 
     def _generate_nexus_url(self):
         """ Generates nexus URL for artifact download """
-        nexus_url = self._nexus_repository
-
         elem_tree = ElementTree(file=os.path.join(self._cwd, "pom.xml"))
-        self.project_version = elem_tree.findtext("{http://maven.apache.org/POM/4.0.0}version")
+
+        if self.project_version == '' or self.project_version is None:
+            self.project_version = elem_tree.findtext("{http://maven.apache.org/POM/4.0.0}version")
+
+        nexus_url = self._generate_base_nexus_url(elem_tree)
+
+        nexus_url += '/'
+        nexus_url += self.project_version
+        nexus_url += '/'
+        nexus_url += '{0}-{1}.jar'.format(self._jar_name, self.project_version)
+
+        return nexus_url
+
+    def _generate_base_nexus_url(self, elem_tree):
+        nexus_url = self._nexus_repository
         group_id = elem_tree.findtext("{http://maven.apache.org/POM/4.0.0}groupId")
 
         group_id = re.sub('\.', '/', group_id)
@@ -483,12 +496,10 @@ class Mendel(object):
         nexus_url += '/'
         nexus_url += self._jar_name
 
-        nexus_url += '/'
-        nexus_url += self.project_version
-        nexus_url += '/'
-        nexus_url += '{0}-{1}.jar'.format(self._jar_name, self.project_version)
-
+        if not nexus_url.startswith("http"):
+            nexus_url = "http://" + nexus_url
         return nexus_url
+
 
     def _backup_current_release(self):
         """
@@ -691,6 +702,34 @@ class Mendel(object):
             self._apt_install_remote_deb(version=rollback_to)
         self._track_event('rolledback')
 
+    def _find_version(self, version):
+        if version == '' or version is None:
+            return
+
+        if version == 'nexus.latest':
+            print "Finding latest version from Nexus..."
+            elem_tree = ElementTree(file=os.path.join(self._cwd, "pom.xml"))
+            nexus_url = self._generate_base_nexus_url(elem_tree) + '/maven-metadata.xml'
+
+            print nexus_url
+
+            maven_meta = run('curl -s ' + str(nexus_url)) # For tests, needs to run on a client
+            print maven_meta
+            maven_meta_xml = fromstring(maven_meta)
+            versioning = maven_meta_xml.find("versioning")
+            self.project_version = versioning.findtext("latest") or versioning.findtext("release")
+
+        else:
+            self.project_version = version.strip()
+
+        self._project_version_specified = True
+
+        if not self.project_version:
+            raise Exception("Unable determine version %s" % version)
+
+        print "Version was set to be %s." % self.project_version
+
+
     ############################################################################
     # Deploy Tasks
     ############################################################################
@@ -707,6 +746,8 @@ class Mendel(object):
         Note: only builds once, no matter how many hosts!
         """
         if not self._is_already_built():
+            if self._project_version_specified:
+                raise Exception("User required version {} to be deployed, but it wasn't avaliable from remote source".format(self.project_version))
             if self._project_type == "java":
                 local('mvn clean -U package')
             elif self._project_type == "python":
@@ -755,12 +796,14 @@ class Mendel(object):
         self._install(bundle_file)
         print green('Successfully installed new release of %s service' % self._service_name)
 
-    def deploy(self):
+    def deploy(self, version=''):
         """
         [core]\t\tbuilds, installs, and deploys to all the specified hosts
         """
         if self._missing_hosts():
             self._log_error_and_exit("error: you didnt specify any hosts with -H")
+
+        self._find_version(version)
 
         curl_output = run('curl -s -o /dev/null -w "%{http_code}" ' + str(self._graphite_host))
 
