@@ -113,6 +113,12 @@ Then you can deploy like this:
 mendel prod deploy
 ```
 
+If you need to deploy a different version than the current working version, you can do this:
+
+```
+mendel prod deploy:1.2.3
+```
+
 rolling back
 ------------
 
