@@ -31,7 +31,14 @@ create a `~/.mendel.conf` file in your `$HOME`. inside, add the following:
 ```
 [graphite]
 host=yourgraphitehostname
+[nexus]
+host=yournexushostname
+port=yournexusport
+repository=yournexusrepo
 ```
+Alternatively, you can set environment variables as described here
+https://sprout.atlassian.net/wiki/spaces/INFRA/pages/568492133/Remote+jar+deployments+in+Mendel#RemotejardeploymentsinMendel-Setup
+
 
 synopsis
 ---------
