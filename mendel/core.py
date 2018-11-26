@@ -142,6 +142,7 @@ class Mendel(object):
         self._nexus_repository = nexus_repository or config.NEXUS_REPOSITORY
 
         self._graphite_host = graphite_host or config.GRAPHITE_HOST
+        self._deployment_user = config.DEPLOYMENT_USER or getpass.getuser()
         self._slack_url = slack_url
         self._slack_emoji = slack_emoji
         self._track_event_endpoint = config.TRACK_EVENT_ENDPOINT
@@ -250,7 +251,7 @@ class Mendel(object):
         could make this less brittle. having CI would be even better but we're not there yet.
         """
         if self._release_dir is None:
-            release_dir_args = (datetime.utcnow().strftime('%Y%m%d-%H%M%S'), getpass.getuser(), self._get_commit_hash())
+            release_dir_args = (datetime.utcnow().strftime('%Y%m%d-%H%M%S'), self._deployment_user, self._get_commit_hash())
             self._release_dir = '%s-%s-%s' % release_dir_args
 
             if self._bundle_type == 'remote_jar':
@@ -871,7 +872,7 @@ class Mendel(object):
 
         url = 'http://%s/events/' % self._graphite_host
 
-        user = getpass.getuser()
+        user = self._deployment_user
         what = '%s %s %s version %s on host %s' % (user, event, self._service_name, self.project_version, env.host_string)
         data = ''
         tags = [str(s) for s in (self._service_name, event)]
@@ -902,7 +903,7 @@ class Mendel(object):
         data = {
             'service': self._api_service_name or self._service_name,
             'host': env.host_string,
-            'deployer': getpass.getuser(),
+            'deployer': self._deployment_user,
             'event': event
         }
 
@@ -911,9 +912,9 @@ class Mendel(object):
         try:
             r = requests.post(url, data)
             if r.status_code != 200:
-                print red('Unable to track deployment event to the external API (HTTP %s)' % r.status_code)
+                print blue('Unable to track deployment event to the external API (HTTP %s)' % r.status_code)
         except Exception as e:
-            print red("Could not track event api with url %s got error %s" % (url, e))
+            print blue("Could not track event api with url %s got error %s" % (url, e))
 
     def _track_event_slack(self, event, failure=False):
         """
@@ -921,9 +922,9 @@ class Mendel(object):
         """
         if self._slack_url is not None:
             if failure:
-                text = "*DEPLOY FAILED FOR* %s %s @ %s, version *%s* to host(s) %s with error %s *ABORTING DEPLOY*" % (getpass.getuser(), self._service_name, self._get_commit_hash(shorten=True), self.project_version, env.host_string, event)
+                text = "*DEPLOY FAILED FOR* %s %s @ %s, version *%s* to host(s) %s with error %s *ABORTING DEPLOY*" % (self._deployment_user, self._service_name, self._get_commit_hash(shorten=True), self.project_version, env.host_string, event)
             else:
-                text = "%s *%s* %s @ %s, version *%s* to host(s) %s" % (getpass.getuser(), event.upper(), self._service_name, self._get_commit_hash(shorten=True), self.project_version, env.host_string)
+                text = "%s *%s* %s @ %s, version *%s* to host(s) %s" % (self._deployment_user, event.upper(), self._service_name, self._get_commit_hash(shorten=True), self.project_version, env.host_string)
             params = {
                 'username': 'Mendel',
                 'text': text,
