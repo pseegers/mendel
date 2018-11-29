@@ -620,7 +620,6 @@ class Mendel(object):
                 self._start_or_restart()
                 print green('successfully rolled back %s to %s' % (
                     self._service_name, rollback_to))
-        self._track_event('rolledback')
 
     def _get_available_nexus_versions(self):
         # validate nexus settings are configured first
@@ -930,8 +929,11 @@ class Mendel(object):
                 'text': text,
                 'icon_emoji': ":rotating_light:" if failure else self._slack_emoji
             }
-            req = urllib2.Request(self._slack_url, json.dumps(params))
-            urllib2.urlopen(req)
+            try:
+                req = urllib2.Request(self._slack_url, json.dumps(params))
+                urllib2.urlopen(req)
+            except Exception as e:
+                print red("Could not notify slack that a mendel event took place at url: %s with error %s" % (self._slack_url, e))
         else:
             print 'No slack_url found skipping slack notification'
 
