@@ -110,6 +110,7 @@ class Mendel(object):
             project_type=None,
             cwd=None,
             jar_name=None,
+            classifier=None,
             nexus_user=None,
             nexus_host=None,
             nexus_port=None,
@@ -131,6 +132,8 @@ class Mendel(object):
         self._project_type = project_type or 'java'
         self._cwd = cwd or '.'
         self._jar_name = jar_name or service_name
+        # Search for a jar in nexus that uses a classifier in its name, e.g. "shaded" -> "foo-1.1.1-shaded.jar"
+        self._classifier = classifier
         self._api_service_name = api_service_name
 
         self._version_control = "hg" if os.path.exists(".hg") else "git"
@@ -483,7 +486,12 @@ class Mendel(object):
         nexus_url += '/'
         nexus_url += self.project_version
         nexus_url += '/'
-        nexus_url += '{0}-{1}.jar'.format(self._jar_name, self.project_version)
+        nexus_url += '{0}-{1}'.format(self._jar_name, self.project_version)
+
+        if self._classifier is not None:
+            nexus_url += '-{0}'.format(self._classifier)
+
+        nexus_url += '.jar'
 
         return nexus_url
 
