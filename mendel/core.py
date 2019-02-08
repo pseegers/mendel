@@ -84,7 +84,7 @@ class Mendel(object):
                 bundle_type='deb'
         )
 
-        upload, deploy, install, build, tail, rollback, upstart, link_latest_release = d.get_tasks()
+        upload, deploy, install, build, tail, rollback, initialize, link_latest_release = d.get_tasks()
 
     and then you can
 
@@ -120,6 +120,7 @@ class Mendel(object):
             slack_url=None,
             slack_emoji=":rocket:",
             use_upstart=True,
+            use_init=True,
             **kwargs
     ):
 
@@ -151,10 +152,17 @@ class Mendel(object):
         self._track_event_endpoint = config.TRACK_EVENT_ENDPOINT
         self.project_version = ''
         self._project_version_specified = False
-        if isinstance(use_upstart, basestring):
-            self._use_upstart = str_to_bool(use_upstart)
+        if isinstance(use_init, basestring):
+            self._use_init = str_to_bool(use_init)
         else:
-            self._use_upstart = use_upstart
+            self._use_init = use_init
+
+        if isinstance(use_upstart, basestring):
+            print red("DEPRECATION WARNING: use_upstart must be changed to use_init.")
+            self._use_init = str_to_bool(use_upstart)
+        else:
+            print red("DEPRECATION WARNING: use_upstart must be changed to use_init.")
+            self._use_init = use_upstart
 
         # Hack -- Who needs polymorphism anyways?
         #
@@ -369,16 +377,16 @@ class Mendel(object):
         return curr_index
 
     def _is_running(self):
-        result = self.upstart('status', print_output=False)
-        return 'start/running' in result
+        result = self.service_wrapper('status', print_output=False, warn_only=False)
+        return 'start/running' in result or 'active (running)' in result
 
     def _start_or_restart(self):
-        if self._use_upstart:
+        if self._use_init:
             if self._is_running():
-                self.upstart('stop')
-                self.upstart('start')
+                self.service_wrapper('stop')
+                self.service_wrapper('start')
             else:
-                self.upstart('start')
+                self.service_wrapper('start')
 
     def _missing_hosts(self):
         return not bool(env.hosts)
@@ -834,7 +842,7 @@ class Mendel(object):
         self._rollback()
         self._track_event('rolledback')
 
-    def upstart(self, cmd, print_output=True):
+    def service_wrapper(self, cmd, print_output=True, warn_only=False):
         """
         [advanced]\t'start', 'stop', 'restart', or get the 'status' of your service
         """
@@ -844,8 +852,8 @@ class Mendel(object):
             return
         with hide('status', 'running', 'stdout'):
             if print_output:
-                print blue('executing upstart:%s' % cmd)
-            out = sudo('%s %s' % (cmd, self._service_name))
+                print blue('executing init:%s' % cmd)
+            out = sudo("SYSTEMD_PAGER='' service %s %s" % (self._service_name, cmd), warn_only=warn_only, quiet=not print_output)
             if print_output:
                 print green(out)
             return out
@@ -956,7 +964,7 @@ class Mendel(object):
                 self.build,
                 self.tail,
                 self.rollback,
-                self.upstart,
+                self.service_wrapper,
                 self.link_latest_release
             ]
         ]

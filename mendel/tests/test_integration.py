@@ -9,9 +9,9 @@ from subprocess import PIPE, Popen, call
 from unittest import TestCase
 
 from fabric.colors import blue, green
+from fabric.context_managers import lcd
 
 MENDEL_TEST_FILE = 'mendel.test.yml'
-
 
 class IntegrationTestMixin(object):
 
@@ -23,6 +23,7 @@ class IntegrationTestMixin(object):
             filecontents = self.MENDEL_YAML % self.ssh_port
             print filecontents
             f.write(filecontents)
+
         os.environ['MENDEL_GRAPHITE_HOST'] = 'www.google.com'
         super(IntegrationTestMixin, self).setUp()
 
@@ -33,40 +34,83 @@ class IntegrationTestMixin(object):
         self.assertEqual(200, status_code)
         self.assertIn('Hello', content)
 
+    def test_ubuntu18_mendel_deploy(self):
+        self.is_ubuntu_18 = True
+        if self.bundle_type == 'remote_jar':
+            (status_code, content) = self.do_deploy(host='stage')
+            print 'status_code: %s' % status_code
+            print 'content: %s' % content
+            self.assertEqual(200, status_code)
+            self.assertIn('Hello', content)
+        else:
+            pass
+
     def test_upstart_config_changes(self):
         state.env.user = 'vagrant'
         state.env.password = 'vagrant'
         state.env.host_string = 'localhost:%s' % self.ssh_port
-
-        if self.bundle_type == 'remote_jar':
-            self.update_project_version('0.0.6', '0.0.7')
 
         self.do_deploy()
         pre_config_status = operations.run("ps aux | grep {0} | grep changed_config | grep -v grep".format(self.service_name),
                                            warn_only=True)
         self.assertTrue(pre_config_status.failed)  # grep returns nonzero if it doesn't find the string
         # Emulate chef change to upstart config
-        operations.sudo("sed -i 's/exec java -jar/exec java -Dchanged_config_line=true -jar/;' /etc/init/{0}.conf".format(self.service_name))
-
-        if self.bundle_type == 'remote_jar':
-            self.update_project_version('0.0.7', '0.0.8')
+        operations.sudo("sed -i 's/java -jar/java -Dchanged_config_line=true -jar/;' /etc/init/{0}.conf".format(self.service_name), warn_only=True)
 
         self.do_deploy()
-        config_status = operations.run("ps aux | grep {0} | grep changed_config | grep -v grep".format(self.service_name))
+        config_status = operations.run("ps aux | grep {0} | grep changed_config | grep -v grep".format(self.service_name), warn_only=True)
         self.assertTrue(config_status.succeeded)
 
-    def do_deploy(self, version=None):
-        if version:
-            cmdline = 'mendel -f %s dev deploy:%s' % (MENDEL_TEST_FILE, version)
-        else:
-            cmdline = 'mendel -f %s dev deploy' % MENDEL_TEST_FILE
-        print cmdline
-        p = Popen(cmdline, stdout=PIPE, stderr=PIPE, shell=True, cwd=self.workingdir)
-        out, err = p.communicate()
-        print out
-        print err
+    def test_systemd_config_changes(self):
+        self.is_ubuntu_18 = True
 
-        myservice_http_port = os.environ.get('STANTONK/FAT-CONTAINER_8080_TCP')
+        if self.bundle_type == 'remote_jar':
+            state.env.user = 'vagrant'
+            state.env.password = 'vagrant'
+            state.env.host_string = 'localhost:2223'
+
+            self.do_deploy(host='stage')
+            pre_config_status = operations.run("ps aux | grep {0} | grep verbose | grep -v grep".format(self.service_name),
+                                               warn_only=True)
+            self.assertTrue(pre_config_status.failed)
+
+            # Emulate chef change to systemd config
+            operations.sudo(
+                "sed -i 's/\/usr\/bin\/java -jar/\/usr\/bin\/java -verbose -jar/;' /etc/systemd/system/{0}.service".format(
+                self.service_name)
+            )
+
+            # Have to reload systemd when source config changes on disk
+            reload = operations.sudo("systemctl daemon-reload")
+            self.assertTrue(reload.succeeded)
+
+            self.do_deploy(host='stage')
+            config_status = operations.run("ps aux | grep {0} | grep verbose | grep -v grep".format(self.service_name), warn_only=True)
+            self.assertTrue(config_status.succeeded)
+        else:
+            pass
+
+    def do_deploy(self, version=None, host='dev'):
+        if version:
+            cmdline = 'mendel -f %s %s deploy:%s' % (MENDEL_TEST_FILE, host, version)
+        else:
+            cmdline = 'mendel -f %s %s deploy' % (MENDEL_TEST_FILE, host)
+
+        print state.env
+        print cmdline
+
+        # This call stalls with ubuntu 18.04 based container, not sure why so hacking around it
+        # when testing ubuntu 18
+        if not self.is_ubuntu_18:
+            p = Popen(cmdline, stdout=PIPE, stderr=PIPE, shell=True, cwd=self.workingdir)
+            out, err = p.communicate()
+            print out
+            print err
+        else:
+            with lcd(self.workingdir):
+                operations.local(cmdline, capture=False)
+
+        myservice_http_port = os.environ.get('STANTONK/FAT-CONTAINER_8080_TCP') if host=='dev' else '8081'
         print "HTTP PORT: %s" % myservice_http_port
         url = 'http://127.0.0.1:%s/hello' % myservice_http_port
         print url
@@ -74,13 +118,14 @@ class IntegrationTestMixin(object):
         # give the java service a few seconds to come up
         status_code, content = 0, ''
         for retries in range(0, 5):
+            print blue('Curl attempt #%d' % retries)
             try:
                 r = urllib2.urlopen(url)
                 content = r.read()
                 status_code = r.getcode()
                 # r = requests.get(url)
                 # status_code, content = r.status_code, r.content
-            except:
+            except Exception:
                 pass
             time.sleep(2)
         return status_code, content
@@ -102,10 +147,17 @@ class IntegrationTestMixin(object):
         state.env.user = 'vagrant'
         state.env.password = 'vagrant'
         print blue("User and password have been assigned")
-        state.env.host_string = 'localhost:%s' % self.ssh_port
+
+        if self.is_ubuntu_18 is False:
+            state.env.host_string = 'localhost:%s' % self.ssh_port
+        else:
+            state.env.host_string = 'localhost:2223'
+            self.is_ubuntu_18 = False
+
         print blue("host has been assigned. Now stopping service")
         operations.sudo("service {0} stop".format(self.service_name), warn_only=True)
         print green("Service has been stopped.")
+
         super(IntegrationTestMixin, self).tearDown()
 
 
@@ -119,6 +171,9 @@ class TgzIntegrationTests(IntegrationTestMixin, TestCase):
       dev:
         hostnames: 127.0.0.1
         port: %s
+      stage:
+        hostnames: 127.0.0.1
+        port: 2223
     """
 
     def setUp(self):
@@ -127,6 +182,7 @@ class TgzIntegrationTests(IntegrationTestMixin, TestCase):
         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
         self.service_name = "myservice-tgz"
         self.bundle_type = 'tgz'
+        self.is_ubuntu_18 = False
 
         super(TgzIntegrationTests, self).setUp()
 
@@ -142,6 +198,9 @@ class JarIntegrationTests(IntegrationTestMixin, TestCase):
       dev:
         hostnames: 127.0.0.1
         port: %s
+      stage:
+        hostnames: 127.0.0.1
+        port: 2223
     """
 
     def setUp(self):
@@ -150,11 +209,13 @@ class JarIntegrationTests(IntegrationTestMixin, TestCase):
         self.fileloc = os.path.join(self.workingdir, MENDEL_TEST_FILE)
         self.service_name = "myservice-jar"
         self.bundle_type = 'jar'
+        self.is_ubuntu_18 = False
 
         super(JarIntegrationTests, self).setUp()
 
 
 class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
+
 
     MENDEL_YAML = """
     service_name: myservice-remote_jar
@@ -165,7 +226,11 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
       dev:
         hostnames: 127.0.0.1
         port: %s
+      stage:
+        hostnames: 127.0.0.1
+        port: 2223
     """
+
 
     def setUp(self):
         nexus_hostname = self.get_nexus_hostname()
@@ -177,6 +242,7 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
         self.pom_template = os.path.join(self.workingdir, 'tmp.xml')
         self.pom = os.path.join(self.workingdir, 'pom.xml')
         self.old_url = 'http://localhost:8081/nexus/content/repositories/releases/'
+        self.is_ubuntu_18 = False
 
         nexus_port = os.environ.get('SONATYPE/NEXUS_8081_TCP')
         self.nexus_url = 'http://localhost:%s/nexus/content/repositories/releases/' % nexus_port
@@ -216,7 +282,7 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
         state.env.password = 'vagrant'
         state.env.host_string = 'localhost:%s' % self.ssh_port
 
-        # Make versions avaliable in nexus
+        # Make versions available in nexus
         self.update_project_version('0.0.6', '0.0.9')
         call('mvn deploy', shell=True, cwd=self.workingdir)
 
@@ -225,14 +291,15 @@ class RemoteJarIntegrationTests(IntegrationTestMixin, TestCase):
         self.update_project_version('0.0.10', '0.0.11')
 
         # Deploy a specific version (no latest)
-        self.do_deploy('0.0.9')
+        self.do_deploy(version='0.0.9')
         config_status = operations.run("ls -al /srv/myservice-remote_jar/current | grep {0} | grep -v grep".format('0.0.9'))
         self.assertTrue(config_status.succeeded)
 
         # Deploy the latest from Nexus
-        self.do_deploy('nexus.latest')
+        self.do_deploy(version='nexus.latest')
         config_status = operations.run("ls -al /srv/myservice-remote_jar/current | grep {0} | grep -v grep".format('0.0.10'))
         self.assertTrue(config_status.succeeded)
+
 
     @staticmethod
     def get_nexus_hostname():

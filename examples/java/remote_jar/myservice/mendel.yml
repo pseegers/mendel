@@ -6,3 +6,6 @@ hosts:
   dev:
     hostnames: 127.0.0.1
     port: 2222
+  stage:
+    hostnames: 127.0.0.1
+    port: 2223
