@@ -98,7 +98,7 @@ def load_mendel_config():
     options, args = parser.parse_known_args()
     try:
         with open(options.file) as f:
-            config = yaml.load(f)
+            config = yaml.safe_load(f)
             return config, options.file
     except Exception as e:
         raise ConfigMissingError(

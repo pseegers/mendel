@@ -1,5 +1,5 @@
 Fabric==1.14.0
-PyYAML==3.11
+PyYAML==4.2b1
 python-debian==0.1.23
 chardet==3.0.3
 requests==2.20.0
