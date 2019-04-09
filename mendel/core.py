@@ -157,10 +157,10 @@ class Mendel(object):
         else:
             self._use_init = use_init
 
-        if isinstance(use_upstart, basestring):
+        if isinstance(use_upstart, basestring) and use_upstart.lower() == 'false':
             print red("DEPRECATION WARNING: use_upstart must be changed to use_init.")
             self._use_init = str_to_bool(use_upstart)
-        else:
+        elif use_upstart == False:
             print red("DEPRECATION WARNING: use_upstart must be changed to use_init.")
             self._use_init = use_upstart
 
