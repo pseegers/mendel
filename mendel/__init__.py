@@ -79,8 +79,8 @@ if not is_running_tests():
 
         mendel_yaml_abspath = os.path.abspath(config_file)
         config['cwd'] = os.path.dirname(mendel_yaml_abspath)
-        print blue('Using config at %s' % magenta(mendel_yaml_abspath))
-        print blue('Setting working directory to %s' % magenta(config['cwd']))
+        print >> sys.stderr, blue('Using config at %s' % magenta(mendel_yaml_abspath))
+        print >> sys.stderr, blue('Setting working directory to %s' % magenta(config['cwd']))
 
         d = Mendel(**config)
 
@@ -102,7 +102,7 @@ if not is_running_tests():
             sys.exit(1)
     except Exception as e:
 
-        print red(e.message)
+        print >> sys.stderr, red(e.message)
         # don't let it continue and spit out the fabric usage
         # stuff if we can't properly parse the mendel.yml
         sys.exit(1)

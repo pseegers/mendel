@@ -593,11 +593,9 @@ class Mendel(object):
 
     def list_nexus_versions(self):
         """
-        List the versions of the detected jar from nexus
-        :return:
+        Prints a list of the versions of the detected jar available in nexus
         """
-        print "test"
-        print self._get_versions_from_nexus()
+        print '\n'.join(self._get_versions_from_nexus())
 
     def link_latest_release(self):
         """
