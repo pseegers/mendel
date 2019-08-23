@@ -31,19 +31,17 @@ if getattr(env, '_already_built', None) is None:
 if getattr(env, '_already_deployed', None) is None:
     env._already_deployed = False
 
+
 ###############################################################################
-# TODO - add example services in python, demonstrate crons can
-# also work
+# TODO - add example services in python, demonstrate crons can also work
 # TODO - add vagrant box with examples
-# TODO drop a file into release directories that are "successful"
+# TODO - drop a file into release directories that are "successful"
 # TODO so we don't roll back to a failed build. either that or we cleanup after
 # TODO ourselves
-
-
-
-# TODO remote_deb will replace deb as soon as we can get all those services
+# TODO - remote_deb will replace deb as soon as we can get all those services
 # TODO using `deb` migrated into nexus. For now we need to support both though
 ###############################################################################
+
 
 class Mendel(object):
     """
@@ -99,6 +97,7 @@ class Mendel(object):
 
 
     """
+
     def __init__(
             self,
             service_name,
@@ -160,7 +159,7 @@ class Mendel(object):
         if isinstance(use_upstart, basestring) and use_upstart.lower() == 'false':
             print red("DEPRECATION WARNING: use_upstart must be changed to use_init.")
             self._use_init = str_to_bool(use_upstart)
-        elif use_upstart == False:
+        elif not use_upstart:
             print red("DEPRECATION WARNING: use_upstart must be changed to use_init.")
             self._use_init = use_upstart
 
@@ -202,7 +201,7 @@ class Mendel(object):
         else:
             import inspect
             tasks = inspect.getmembers(self, predicate=inspect.ismethod)
-            print red("Invalid task name: %s"% task_name)
+            print red("Invalid task name: %s" % task_name)
             print
             print "Please choose one of"
             print
@@ -262,7 +261,8 @@ class Mendel(object):
         could make this less brittle. having CI would be even better but we're not there yet.
         """
         if self._release_dir is None:
-            release_dir_args = (datetime.utcnow().strftime('%Y%m%d-%H%M%S'), self._deployment_user, self._get_commit_hash())
+            release_dir_args = (
+                datetime.utcnow().strftime('%Y%m%d-%H%M%S'), self._deployment_user, self._get_commit_hash())
             self._release_dir = '%s-%s-%s' % release_dir_args
 
             if self._bundle_type == 'remote_jar':
@@ -299,7 +299,6 @@ class Mendel(object):
 
     def _is_already_built(self):
         return env._already_built or self._is_already_in_nexus()
-
 
     def _is_already_deployed(self):
         return env._already_deployed or self._is_already_in_nexus()
@@ -438,7 +437,8 @@ class Mendel(object):
             # so we can delete it after extraction
             sudo('chown %s:%s %s' % (self._user, self._group, bundle_file))
 
-            sudo('tar --strip-components 1 -zxvf %(bf)s && rm %(bf)s' % {'bf': bundle_file}, user=self._user, group=self._group)
+            sudo('tar --strip-components 1 -zxvf %(bf)s && rm %(bf)s' % {'bf': bundle_file}, user=self._user,
+                 group=self._group)
 
             if self._project_type == 'java':
                 sudo('ln -sf *.jar %s.jar' % self._service_name, user=self._user, group=self._group)
@@ -448,12 +448,13 @@ class Mendel(object):
                 # fabric commands are each issued in their own shell so the virtual env needs to be activated each time
                 # pip had issues with wheel cache permissions which were solved with the --no-cache flag
                 # the requires.txt is used instead of setup.py install because we don't need the code installed as a module
-                #   but we still need to the requirements installed, this way we dont have to find a requirements.txt file
-                #   in the rest of the application b/c setup.py sdist puts it in the egg-info
-                sudo('source /srv/{srv_name}/env/bin/activate && pip install --no-cache -r {rel_dir}/{srv_name}.egg-info/requires.txt'
+                # but we still need to the requirements installed, this way we dont have to find a requirements.txt file
+                # in the rest of the application b/c setup.py sdist puts it in the egg-info
+                sudo(
+                    'source /srv/{srv_name}/env/bin/activate && pip install --no-cache -r {rel_dir}/{srv_name}.egg-info/requires.txt'
                         .format(srv_name=self._service_name, rel_dir=self._rpath('releases', release_dir)),
-                        user=self._user,
-                        group=self._group)
+                    user=self._user,
+                    group=self._group)
                 # need to get the top level application directory but not the egg-info directory or other setup files
                 project_dir = sudo("find . -maxdepth 1 -mindepth 1 -type d -not -regex '.*egg-info$'")
                 project_dir = project_dir[2:]  # find command returns a string like './dir'
@@ -517,7 +518,6 @@ class Mendel(object):
             nexus_url = "http://" + nexus_url
         return nexus_url
 
-
     def _backup_current_release(self):
         """
 
@@ -530,8 +530,8 @@ class Mendel(object):
         current_release = self._rpath('releases', self._get_current_release()).rstrip('/')
 
         should_backup = \
-                '.old' not in current_release and \
-                not files.exists(current_release + '.old')
+            '.old' not in current_release and \
+            not files.exists(current_release + '.old')
 
         if should_backup:
             sudo('mv %(dir)s %(dir)s.old' % {'dir': current_release}, user=self._user, group=self._group)
@@ -763,14 +763,17 @@ class Mendel(object):
         """
         if not self._is_already_built():
             if self._project_version_specified:
-                raise Exception("User required version {} to be deployed, but it wasn't avaliable from remote source".format(self.project_version))
+                raise Exception(
+                    "User required version {} to be deployed, but it wasn't available from remote source".format(
+                        self.project_version))
             if self._project_type == "java":
                 local('mvn clean -U package')
             elif self._project_type == "python":
                 if self._bundle_type == "tgz":
                     local('python setup.py sdist')
                 else:
-                    raise Exception("Unsupported bundle type: {} for project type: {}".format(self._bundle_type, self._project_type))
+                    raise Exception("Unsupported bundle type: {} for project type: {}".format(self._bundle_type,
+                                                                                              self._project_type))
             else:
                 raise Exception("Unsupported project type: %s" % self._project_type)
             self._mark_as_built()
@@ -785,7 +788,6 @@ class Mendel(object):
             release_dir = self._get_latest_release()
         print green("Linking release %s into current" % magenta(release_dir))
         self._change_symlink_to(self._rpath('releases', release_dir))
-
 
     def upload(self):
         """
@@ -820,14 +822,10 @@ class Mendel(object):
             self._log_error_and_exit("error: you didnt specify any hosts with -H")
 
         self._find_version(version)
-
-        curl_output = run('curl -s -o /dev/null -w "%{http_code}" ' + str(self._graphite_host))
-
-        if curl_output.strip() == '200':
-            print green('Graphite host is present in mendel configuration and responsive')
-            print blue('Proceeding with deployment...')
-        else:
-            self._log_error_and_exit('Graphite host is not present in mendel configuration or is not responsive')
+        try:
+            requests.get(self._graphite_host).raise_for_status()
+        except:
+            self._log_error_and_exit('Graphite host %s is not present in mendel configuration or is not responsive' % self._graphite_host)
 
         self.build()
         self.upload()
@@ -853,7 +851,8 @@ class Mendel(object):
         with hide('status', 'running', 'stdout'):
             if print_output:
                 print blue('executing init:%s' % cmd)
-            out = sudo("SYSTEMD_PAGER='' service %s %s" % (self._service_name, cmd), warn_only=warn_only, quiet=not print_output)
+            out = sudo("SYSTEMD_PAGER='' service %s %s" % (self._service_name, cmd), warn_only=warn_only,
+                       quiet=not print_output)
             if print_output:
                 print green(out)
             return out
@@ -888,7 +887,8 @@ class Mendel(object):
         url = 'http://%s/events/' % self._graphite_host
 
         user = self._deployment_user
-        what = '%s %s %s version %s on host %s' % (user, event, self._service_name, self.project_version, env.host_string)
+        what = '%s %s %s version %s on host %s' % (
+            user, event, self._service_name, self.project_version, env.host_string)
         data = ''
         tags = [str(s) for s in (self._service_name, event)]
         post_data = {'what': what, 'tags': tags, 'data': data}
@@ -937,9 +937,14 @@ class Mendel(object):
         """
         if self._slack_url is not None:
             if failure:
-                text = "*DEPLOY FAILED FOR* %s %s @ %s, version *%s* to host(s) %s with error %s *ABORTING DEPLOY*" % (self._deployment_user, self._service_name, self._get_commit_hash(shorten=True), self.project_version, env.host_string, event)
+                text = "*DEPLOY FAILED FOR* %s %s @ %s, version *%s* to host(s) %s with error %s *ABORTING DEPLOY*" % (
+                    self._deployment_user, self._service_name, self._get_commit_hash(shorten=True),
+                    self.project_version,
+                    env.host_string, event)
             else:
-                text = "%s *%s* %s @ %s, version *%s* to host(s) %s" % (self._deployment_user, event.upper(), self._service_name, self._get_commit_hash(shorten=True), self.project_version, env.host_string)
+                text = "%s *%s* %s @ %s, version *%s* to host(s) %s" % (
+                    self._deployment_user, event.upper(), self._service_name, self._get_commit_hash(shorten=True),
+                    self.project_version, env.host_string)
             params = {
                 'username': 'Mendel',
                 'text': text,
@@ -949,7 +954,8 @@ class Mendel(object):
                 req = urllib2.Request(self._slack_url, json.dumps(params))
                 urllib2.urlopen(req)
             except Exception as e:
-                print red("Could not notify slack that a mendel event took place at url: %s with error %s" % (self._slack_url, e))
+                print red("Could not notify slack that a mendel event took place at url: %s with error %s" % (
+                    self._slack_url, e))
         else:
             print 'No slack_url found skipping slack notification'
 

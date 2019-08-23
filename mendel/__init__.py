@@ -20,6 +20,8 @@ env.use_ssh_config = True
 
 def order_rep(dumper, data):
     return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.items(), flow_style=False)
+
+
 yaml.add_representer(OrderedDict, order_rep)
 
 
