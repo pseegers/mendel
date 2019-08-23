@@ -1,8 +1,0 @@
-Package: [[name]]
-Version: [[version]]
-Section: misc
-Priority: optional
-Architecture: all
-Depends:
-Maintainer: Me <changme@sproutsocial.com>
-Description: My awesome service

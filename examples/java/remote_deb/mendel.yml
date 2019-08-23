@@ -1,7 +1,0 @@
-service_name: myservice
-bundle_type: remote_deb
-project_type: java
-hosts:
-  dev: 
-    hostnames: 127.0.0.1
-    port: 2200

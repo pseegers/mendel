@@ -38,13 +38,13 @@ def init(service_name=None, bundle_type=None, project_type=None):
         red('you must provide a service_name')
         sys.exit(1)
 
-    bundle_type = bundle_type or raw_input('enter bundle_type type (jar, tgz, deb, remote_jar) [remote_jar]: ') or 'remote_jar'
-    if bundle_type not in ('jar', 'tgz', 'deb', 'remote_jar'):
+    bundle_type = bundle_type or raw_input('enter bundle_type type (jar, tgz, remote_jar) [remote_jar]: ') or 'remote_jar'
+    if bundle_type not in ('jar', 'tgz', 'remote_jar'):
         red('if you want bundle_type %s, issue a pull request.' % bundle_type)
         sys.exit(1)
 
-    if bundle_type in ('jar', 'deb', 'remote_jar'):
-        # default for jar or deb packaging should just be target, this is expected
+    if bundle_type in ('jar', 'remote_jar'):
+        # default for jar packaging should just be target, this is expected
         # for most people's builds.
         build_target_path = 'target/'
     else:
@@ -66,9 +66,6 @@ def init(service_name=None, bundle_type=None, project_type=None):
     conf['hosts'] = {'dev': {'hostnames': '127.0.0.1', 'port': '2222'}}
     with open('mendel.yml', 'w') as f:
         yaml.dump(conf, f, default_flow_style=False)
-
-    # TODO generate stock vagrant file
-    # other misc stuff to get LWRP-type env
 
 
 if not is_running_tests():

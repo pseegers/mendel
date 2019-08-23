@@ -8,7 +8,6 @@ import urllib2
 import re
 
 import requests
-from debian import deb822
 
 from fabric.colors import red, green, magenta, blue, cyan
 from fabric.context_managers import cd, lcd, hide
@@ -38,8 +37,6 @@ if getattr(env, '_already_deployed', None) is None:
 # TODO - drop a file into release directories that are "successful"
 # TODO so we don't roll back to a failed build. either that or we cleanup after
 # TODO ourselves
-# TODO - remote_deb will replace deb as soon as we can get all those services
-# TODO using `deb` migrated into nexus. For now we need to support both though
 ###############################################################################
 
 
@@ -79,7 +76,7 @@ class Mendel(object):
                 service_name='sproutqueue-global',
                 build_target_path='target',
                 user='sq-global',
-                bundle_type='deb'
+                bundle_type='remote_jar'
         )
 
         upload, deploy, install, build, tail, rollback, initialize, link_latest_release = d.get_tasks()
@@ -167,10 +164,6 @@ class Mendel(object):
             self._install = self._install_tgz
             self._upload = self._upload_tgz
             self._rollback = self._symlink_rollback
-        elif bundle_type == 'deb':
-            self._install = self._install_deb
-            self._upload = self._upload_deb
-            self._rollback = self._symlink_rollback
         elif bundle_type == 'jar':
             self._install = self._install_jar
             self._upload = self._upload_jar
@@ -179,10 +172,6 @@ class Mendel(object):
             self._install = self._install_remote_jar
             self._upload = self._upload_remote_jar
             self._rollback = self._symlink_rollback
-        elif bundle_type == 'remote_deb':
-            self._install = self._install_remote_deb
-            self._upload = self._upload_remote_deb
-            self._rollback = self._apt_rollback
 
             # this is a hack, we "build" during
             # the "upload" task via `mvn deploy`
@@ -301,13 +290,9 @@ class Mendel(object):
                 if self._bundle_type == "tgz":
                     # Get most recently touched tarball
                     r = local('ls -1t *.tar.gz | head -1', capture=True)
-                elif self._bundle_type == "deb":
-                    r = local('ls *.deb', capture=True)
                 elif self._bundle_type == "jar":
                     r = local('ls %s.jar' % self._jar_name, capture=True)
                 elif self._bundle_type == "remote_jar":
-                    return None
-                elif self._bundle_type == "remote_deb":
                     return None
                 else:
                     raise Exception('Unsupported bundle type: %s' % self._bundle_type)
@@ -348,25 +333,6 @@ class Mendel(object):
 
         return curr_index
 
-    def _display_apt_versions_for_rollback_selection(self, releases, current):
-        """
-        displays releases with current release flagged, also returns index of
-        current release in release list
-        """
-        r_list, curr_index = [], None
-        for i, r in enumerate(releases):
-            release_string = ('%s %s' % (r.get('Version'), r.get('Filename', '').split('/')[-1]))
-            if current == r.get('Version'):
-                r_list.append(release_string + green(' <-- current'))
-                curr_index = i
-            else:
-                r_list.append(release_string)
-
-        for r in r_list:
-            print(r)
-
-        return curr_index
-
     def _is_running(self):
         result = self.service_wrapper('status', print_output=False, warn_only=False)
         return 'start/running' in result or 'active (running)' in result
@@ -385,42 +351,6 @@ class Mendel(object):
     def _get_latest_release(self):
         with hide('stdout', 'running'):
             return run('ls -lt %s' % self._rpath('releases')).split('\n')[1].split()[-1]
-
-    def _dpkg_install_deb(self, fq_bundle_file):
-        with hide('stdout'):
-            sudo('dpkg --force-confold -i %s' % fq_bundle_file)
-
-    def _apt_install_remote_deb_latest(self):
-        print blue('upgrading package %s to latest available version' % self._service_name)
-        with hide('stdout'):
-            sudo('apt-get update')
-        sudo(
-            'apt-get install '
-            '-y '
-            '--force-yes '
-            '--only-upgrade '
-            '-o Dpkg::Options::="--force-confold" '
-            '%s'  % self._service_name
-        )
-
-    def _apt_install_remote_deb(self, version=None):
-        if not version:
-            self._apt_install_remote_deb_latest()
-
-        else:
-            print blue('installing %s %s ' % (self._service_name, version))
-            with hide('stdout'):
-                sudo('apt-get update')
-            sudo(
-                'apt-get install '
-                '-y '
-                '--force-yes '
-                '-o Dpkg::Options::="--force-confold" '
-                '%s=%s'  % (self._service_name, version)
-            )
-
-        jar_name = run('readlink %s.jar' % self._rpath("current", self._service_name))
-        print green('apt installed new jar: %s' % jar_name)
 
     def _install_tgz(self, bundle_file):
         release_dir = self._new_release_dir()
@@ -529,14 +459,6 @@ class Mendel(object):
             sudo('mv %(dir)s %(dir)s.old' % {'dir': current_release}, user=self._user, group=self._group)
             self._change_symlink_to("%s.old" % current_release)
 
-    def _install_deb(self, bundle_file):
-        self._backup_current_release()
-        self._dpkg_install_deb(self._tpath(bundle_file))
-        self.link_latest_release()
-
-    def _install_remote_deb(self, *ignored):
-        self._apt_install_remote_deb_latest()
-
     def _upload_tgz(self, bundle_file):
         """
         create a new release dir and upload tarball
@@ -548,25 +470,6 @@ class Mendel(object):
         put(fq_bundle_file, self._rpath('releases', release_dir), use_sudo=True)
 
         return release_dir
-
-    def _upload_deb(self, bundle_file):
-        """
-        upload a deb to /tmp,  return path
-        """
-        dest = self._tpath()
-        fq_bundle_file = self._lpath(self._build_target_path, bundle_file)
-        put(fq_bundle_file, dest)
-
-        return dest
-
-    def _upload_remote_deb(self, *ignored):
-        """
-        upload a deb to nexus
-        """
-        if self._project_type == "java":
-            local('mvn clean -U deploy')
-        else:
-            raise Exception("Unsupported project type: %s" % self._project_type)
 
     def _upload_remote_jar(self, jar_name):
 
@@ -628,87 +531,6 @@ class Mendel(object):
                 self._start_or_restart()
                 print green('successfully rolled back %s to %s' % (
                     self._service_name, rollback_to))
-
-    def _get_available_nexus_versions(self):
-        # validate nexus settings are configured first
-        for suffix in ('host', 'port', 'user', 'repository'):
-            if not getattr(self, '_nexus_%s' % suffix):
-                self._log_error_and_exit('~/.mendel.conf is missing %s in [nexus] configuration section' % suffix)
-
-        url_for_debug = (
-                'http://%(nexus_host)s:%(nexus_port)s'
-                '/nexus/content/repositories'
-                '/%(nexus_repository)s'
-                '/Packages' % dict(
-            nexus_host=self._nexus_host,
-            nexus_port=self._nexus_port,
-            nexus_repository=self._nexus_repository
-        ))
-
-        print blue('Downloading packages from %s' % url_for_debug)
-
-        #TODO maybe read password from maven settings?
-        nexus_password = os.environ.get('MENDEL_NEXUS_PASSWORD') or \
-                         getpass.getpass(prompt='Enter nexus password: ')
-
-        packages_file = requests.get(
-            'http://%(nexus_user)s:%(nexus_password)s'
-            '@%(nexus_host)s:%(nexus_port)s'
-            '/nexus/content/repositories'
-            '/%(nexus_repository)s'
-            '/Packages' % dict(
-                nexus_user=self._nexus_user,
-                nexus_password=nexus_password,
-                nexus_host=self._nexus_host,
-                nexus_port=self._nexus_port,
-                nexus_repository=self._nexus_repository
-            )
-        ).content
-
-        package_entries = [
-            deb822.Packages(package_info)
-            for package_info in packages_file.split('\n\n')
-            if package_info
-        ]
-
-        available_versions = [
-            p for p in package_entries
-            if p.get('Package') == self._service_name
-        ]
-
-        print blue('Found %s available versions of %s' % (len(package_entries), self._service_name))
-
-        return available_versions
-
-    def _get_current_package_version(self):
-        with hide('stdout'):
-            package_info = run('dpkg-query -s %s' % self._service_name)
-            pkg = deb822.Packages(package_info)
-            return pkg.get('Version')
-
-    def _apt_rollback(self):
-        def validator(rollback_candidate):
-            if rollback_candidate not in [v.get('Version') for v in available_versions]:
-                raise Exception('invalid rollback selection: %s' % rollback_candidate)
-            return rollback_candidate
-
-        with hide('status', 'running', 'stdout'):
-            available_versions = self._get_available_nexus_versions()
-            current_version = self._get_current_package_version()
-
-            curr_index = self._display_apt_versions_for_rollback_selection(
-                available_versions,
-                current_version
-            )
-
-            default_rollback_choice = available_versions[max(curr_index - 1, 0)]
-            rollback_to = prompt(
-                'Rollback to:',
-                default=default_rollback_choice.get('Version'),
-                validate=validator
-            )
-            self._apt_install_remote_deb(version=rollback_to)
-        self._track_event('rolledback')
 
     def _find_version(self, version):
         if version == '' or version is None:
