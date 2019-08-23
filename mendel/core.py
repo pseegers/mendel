@@ -716,16 +716,7 @@ class Mendel(object):
 
         if version == 'nexus.latest':
             print "Finding latest version from Nexus..."
-            elem_tree = ElementTree(file=os.path.join(self._cwd, "pom.xml"))
-            nexus_url = self._generate_base_nexus_url(elem_tree) + '/maven-metadata.xml'
-
-            print nexus_url
-
-            maven_meta = run('curl -s ' + str(nexus_url)) # For tests, needs to run on a client
-            print maven_meta
-            maven_meta_xml = fromstring(maven_meta)
-            versioning = maven_meta_xml.find("versioning")
-            self.project_version = versioning.findtext("latest") or versioning.findtext("release")
+            self.project_version = self._get_versions_from_nexus()[-1]
 
         else:
             self.project_version = version.strip()
@@ -737,6 +728,13 @@ class Mendel(object):
 
         print "Version was set to be %s." % self.project_version
 
+    def _get_versions_from_nexus(self):
+        elem_tree = ElementTree(file=os.path.join(self._cwd, "pom.xml"))
+        nexus_url = self._generate_base_nexus_url(elem_tree) + '/maven-metadata.xml'
+        maven_meta = requests.get(nexus_url).text
+        maven_meta_xml = fromstring(maven_meta)
+        versioning = maven_meta_xml.find("versioning")
+        return map(lambda x: x.text ,  versioning.find('versions').getchildren())
 
     ############################################################################
     # Deploy Tasks
@@ -771,6 +769,13 @@ class Mendel(object):
             self._mark_as_built()
             self._track_event_slack('built')
 
+    def list_nexus_versions(self):
+        """
+        List the versions of the detected jar from nexus
+        :return:
+        """
+        print "test"
+        print self._get_versions_from_nexus()
 
     def link_latest_release(self):
         """
@@ -963,6 +968,7 @@ class Mendel(object):
                 self.tail,
                 self.rollback,
                 self.service_wrapper,
-                self.link_latest_release
+                self.link_latest_release,
+                self.list_nexus_versions
             ]
         ]

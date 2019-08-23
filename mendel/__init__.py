@@ -87,7 +87,7 @@ if not is_running_tests():
 
         d = Mendel(**config)
 
-        upload, deploy, install, build, tail, rollback, upstart, link_latest_release = d.get_tasks()
+        upload, deploy, install, build, tail, rollback, upstart, link_latest_release, list_nexus_versions = d.get_tasks()
 
         for key, host_string in config.get('hosts', {}).items():
             vars()[key] = create_host_task(key, host_string)
