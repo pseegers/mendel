@@ -110,9 +110,6 @@ class Mendel(object):
             cwd=None,
             jar_name=None,
             classifier=None,
-            nexus_user=None,
-            nexus_host=None,
-            nexus_port=None,
             nexus_repository=None,
             graphite_host=None,
             api_service_name=None,
@@ -139,9 +136,6 @@ class Mendel(object):
         self._version_control = "hg" if os.path.exists(".hg") else "git"
         self._release_dir = None
 
-        self._nexus_user = nexus_user or config.NEXUS_USER
-        self._nexus_host = nexus_host or config.NEXUS_HOST
-        self._nexus_port = nexus_port or config.NEXUS_PORT
         self._nexus_repository = nexus_repository or config.NEXUS_REPOSITORY
 
         self._graphite_host = graphite_host or config.GRAPHITE_HOST
@@ -236,22 +230,20 @@ class Mendel(object):
         Obtain commit hash that the repository is currently at, so we can tag the release dir with it as well
         as report the commit hash of what's deployed. Note that this is not the "latest" commit intentionally, it is the
         commit hash that the repository is currently pointed to.
-
-        Note: Does not support git repositories yet.
         """
         if self._version_control is "hg":
-            commithash = local('hg id -i', capture=True)
+            commit_hash = local('hg id -i', capture=True)
         elif self._version_control is "git":
             if shorten:
-                commithash = local('git rev-parse --short=7 HEAD', capture=True)
+                commit_hash = local('git rev-parse --short=7 HEAD', capture=True)
             else:
-                commithash = local('git rev-parse HEAD', capture=True)
+                commit_hash = local('git rev-parse HEAD', capture=True)
         else:
             raise Exception("Unsupported version control: %s", self._version_control)
 
-        if commithash.failed or commithash.strip() == '':
-            self._log_error_and_exit("failed to obtain commit hash. are you in a mercurial repo? i don't support mercurial yet, sorry, issue a PR")
-        return commithash.strip()
+        if commit_hash.failed or commit_hash.strip() == '':
+            self._log_error_and_exit("failed to obtain commit hash.")
+        return commit_hash.strip()
 
     def _new_release_dir(self):
         """
