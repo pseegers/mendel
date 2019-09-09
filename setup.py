@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 import inspect
 import os
-import uuid
 
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
 
+
 def parse_requirements(filename):
     """ load requirements from a pip requirements file """
     lineiter = (line.strip() for line in open(filename))
     return [line for line in lineiter if line and not line.startswith("#")]
+
 
 # place __version__ in setup.py namespace, w/o
 # having to import and creating a dependency nightmare

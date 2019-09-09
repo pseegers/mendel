@@ -20,6 +20,8 @@ env.use_ssh_config = True
 
 def order_rep(dumper, data):
     return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.items(), flow_style=False)
+
+
 yaml.add_representer(OrderedDict, order_rep)
 
 
@@ -36,13 +38,13 @@ def init(service_name=None, bundle_type=None, project_type=None):
         red('you must provide a service_name')
         sys.exit(1)
 
-    bundle_type = bundle_type or raw_input('enter bundle_type type (jar, tgz, deb, remote_jar) [remote_jar]: ') or 'remote_jar'
-    if bundle_type not in ('jar', 'tgz', 'deb', 'remote_jar'):
+    bundle_type = bundle_type or raw_input('enter bundle_type type (jar, tgz, remote_jar) [remote_jar]: ') or 'remote_jar'
+    if bundle_type not in ('jar', 'tgz', 'remote_jar'):
         red('if you want bundle_type %s, issue a pull request.' % bundle_type)
         sys.exit(1)
 
-    if bundle_type in ('jar', 'deb', 'remote_jar'):
-        # default for jar or deb packaging should just be target, this is expected
+    if bundle_type in ('jar', 'remote_jar'):
+        # default for jar packaging should just be target, this is expected
         # for most people's builds.
         build_target_path = 'target/'
     else:
@@ -65,9 +67,6 @@ def init(service_name=None, bundle_type=None, project_type=None):
     with open('mendel.yml', 'w') as f:
         yaml.dump(conf, f, default_flow_style=False)
 
-    # TODO generate stock vagrant file
-    # other misc stuff to get LWRP-type env
-
 
 if not is_running_tests():
     ############################################################################
@@ -80,12 +79,12 @@ if not is_running_tests():
 
         mendel_yaml_abspath = os.path.abspath(config_file)
         config['cwd'] = os.path.dirname(mendel_yaml_abspath)
-        print blue('Using config at %s' % magenta(mendel_yaml_abspath))
-        print blue('Setting working directory to %s' % magenta(config['cwd']))
+        print >> sys.stderr, blue('Using config at %s' % magenta(mendel_yaml_abspath))
+        print >> sys.stderr, blue('Setting working directory to %s' % magenta(config['cwd']))
 
         d = Mendel(**config)
 
-        upload, deploy, install, build, tail, rollback, upstart, link_latest_release = d.get_tasks()
+        upload, deploy, install, build, tail, rollback, upstart, link_latest_release, list_nexus_versions = d.get_tasks()
 
         for key, host_string in config.get('hosts', {}).items():
             vars()[key] = create_host_task(key, host_string)
@@ -103,7 +102,7 @@ if not is_running_tests():
             sys.exit(1)
     except Exception as e:
 
-        print red(e.message)
+        print >> sys.stderr, red(e.message)
         # don't let it continue and spit out the fabric usage
         # stuff if we can't properly parse the mendel.yml
         sys.exit(1)

@@ -23,6 +23,9 @@ class Parser(SafeConfigParser):
 class Config(object):
 
     def __init__(self):
+        self.DEFAULT_NEXUS_REPOSITORY = 'nexus.int.sproutsocial.com:8081/nexus/content/repositories/releases/'
+        self.DEFAULT_GRAPHITE_HOST = 'statsd.int.sproutsocial.com'
+        self.DEFAULT_EVENT_ENDPOINT = 'kudzu.int.sproutsocial.com/deploys/'
         config_file = os.environ.get('MENDEL_CONFIG_FILE', os.path.expanduser('~/.mendel.conf'))
         self._parser = Parser()
 
@@ -32,10 +35,11 @@ class Config(object):
             with open(config_file) as f:
                 self._parser.readfp(f)
 
-        self.NEXUS_USER = os.environ.get('MENDEL_NEXUS_USER', self._parser.get_or('nexus', 'user'))
-        self.NEXUS_HOST = os.environ.get('MENDEL_NEXUS_HOST', self._parser.get_or('nexus', 'host'))
-        self.NEXUS_PORT = int(os.environ.get('MENDEL_NEXUS_PORT', self._parser.getint_or('nexus', 'port', 0)))
-        self.NEXUS_REPOSITORY = os.environ.get('MENDEL_NEXUS_REPOSITORY', self._parser.get_or('nexus', 'repository'))
-        self.GRAPHITE_HOST = os.environ.get('MENDEL_GRAPHITE_HOST', self._parser.get_or('graphite', 'host'))
-        self.TRACK_EVENT_ENDPOINT = os.environ.get('TRACK_EVENT_ENDPOINT', self._parser.get_or('api', 'track_event'))
-        self.DEPLOYMENT_USER = os.environ.get('DEPLOYMENT_USER', self._parser.get_or('deployment', 'user'))
+        self.NEXUS_REPOSITORY = os.environ.get('MENDEL_NEXUS_REPOSITORY',
+                                               self._parser.get_or('nexus', 'repository', self.DEFAULT_NEXUS_REPOSITORY))
+        self.GRAPHITE_HOST = os.environ.get('MENDEL_GRAPHITE_HOST',
+                                            self._parser.get_or('graphite', 'host', self.DEFAULT_GRAPHITE_HOST))
+        self.TRACK_EVENT_ENDPOINT = os.environ.get('TRACK_EVENT_ENDPOINT',
+                                                   self._parser.get_or('api', 'track_event', self.DEFAULT_EVENT_ENDPOINT))
+        self.DEPLOYMENT_USER = os.environ.get('DEPLOYMENT_USER',
+                                              self._parser.get_or('deployment', 'user'))

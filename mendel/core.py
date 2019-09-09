@@ -8,7 +8,6 @@ import urllib2
 import re
 
 import requests
-from debian import deb822
 
 from fabric.colors import red, green, magenta, blue, cyan
 from fabric.context_managers import cd, lcd, hide
@@ -31,19 +30,15 @@ if getattr(env, '_already_built', None) is None:
 if getattr(env, '_already_deployed', None) is None:
     env._already_deployed = False
 
+
 ###############################################################################
-# TODO - add example services in python, demonstrate crons can
-# also work
+# TODO - add example services in python, demonstrate crons can also work
 # TODO - add vagrant box with examples
-# TODO drop a file into release directories that are "successful"
+# TODO - drop a file into release directories that are "successful"
 # TODO so we don't roll back to a failed build. either that or we cleanup after
 # TODO ourselves
-
-
-
-# TODO remote_deb will replace deb as soon as we can get all those services
-# TODO using `deb` migrated into nexus. For now we need to support both though
 ###############################################################################
+
 
 class Mendel(object):
     """
@@ -81,7 +76,7 @@ class Mendel(object):
                 service_name='sproutqueue-global',
                 build_target_path='target',
                 user='sq-global',
-                bundle_type='deb'
+                bundle_type='remote_jar'
         )
 
         upload, deploy, install, build, tail, rollback, initialize, link_latest_release = d.get_tasks()
@@ -99,6 +94,7 @@ class Mendel(object):
 
 
     """
+
     def __init__(
             self,
             service_name,
@@ -111,9 +107,6 @@ class Mendel(object):
             cwd=None,
             jar_name=None,
             classifier=None,
-            nexus_user=None,
-            nexus_host=None,
-            nexus_port=None,
             nexus_repository=None,
             graphite_host=None,
             api_service_name=None,
@@ -140,9 +133,6 @@ class Mendel(object):
         self._version_control = "hg" if os.path.exists(".hg") else "git"
         self._release_dir = None
 
-        self._nexus_user = nexus_user or config.NEXUS_USER
-        self._nexus_host = nexus_host or config.NEXUS_HOST
-        self._nexus_port = nexus_port or config.NEXUS_PORT
         self._nexus_repository = nexus_repository or config.NEXUS_REPOSITORY
 
         self._graphite_host = graphite_host or config.GRAPHITE_HOST
@@ -160,7 +150,7 @@ class Mendel(object):
         if isinstance(use_upstart, basestring) and use_upstart.lower() == 'false':
             print red("DEPRECATION WARNING: use_upstart must be changed to use_init.")
             self._use_init = str_to_bool(use_upstart)
-        elif use_upstart == False:
+        elif not use_upstart:
             print red("DEPRECATION WARNING: use_upstart must be changed to use_init.")
             self._use_init = use_upstart
 
@@ -174,10 +164,6 @@ class Mendel(object):
             self._install = self._install_tgz
             self._upload = self._upload_tgz
             self._rollback = self._symlink_rollback
-        elif bundle_type == 'deb':
-            self._install = self._install_deb
-            self._upload = self._upload_deb
-            self._rollback = self._symlink_rollback
         elif bundle_type == 'jar':
             self._install = self._install_jar
             self._upload = self._upload_jar
@@ -186,10 +172,6 @@ class Mendel(object):
             self._install = self._install_remote_jar
             self._upload = self._upload_remote_jar
             self._rollback = self._symlink_rollback
-        elif bundle_type == 'remote_deb':
-            self._install = self._install_remote_deb
-            self._upload = self._upload_remote_deb
-            self._rollback = self._apt_rollback
 
             # this is a hack, we "build" during
             # the "upload" task via `mvn deploy`
@@ -202,7 +184,7 @@ class Mendel(object):
         else:
             import inspect
             tasks = inspect.getmembers(self, predicate=inspect.ismethod)
-            print red("Invalid task name: %s"% task_name)
+            print red("Invalid task name: %s" % task_name)
             print
             print "Please choose one of"
             print
@@ -237,22 +219,20 @@ class Mendel(object):
         Obtain commit hash that the repository is currently at, so we can tag the release dir with it as well
         as report the commit hash of what's deployed. Note that this is not the "latest" commit intentionally, it is the
         commit hash that the repository is currently pointed to.
-
-        Note: Does not support git repositories yet.
         """
         if self._version_control is "hg":
-            commithash = local('hg id -i', capture=True)
+            commit_hash = local('hg id -i', capture=True)
         elif self._version_control is "git":
             if shorten:
-                commithash = local('git rev-parse --short=7 HEAD', capture=True)
+                commit_hash = local('git rev-parse --short=7 HEAD', capture=True)
             else:
-                commithash = local('git rev-parse HEAD', capture=True)
+                commit_hash = local('git rev-parse HEAD', capture=True)
         else:
             raise Exception("Unsupported version control: %s", self._version_control)
 
-        if commithash.failed or commithash.strip() == '':
-            self._log_error_and_exit("failed to obtain commit hash. are you in a mercurial repo? i don't support mercurial yet, sorry, issue a PR")
-        return commithash.strip()
+        if commit_hash.failed or commit_hash.strip() == '':
+            self._log_error_and_exit("failed to obtain commit hash.")
+        return commit_hash.strip()
 
     def _new_release_dir(self):
         """
@@ -262,7 +242,8 @@ class Mendel(object):
         could make this less brittle. having CI would be even better but we're not there yet.
         """
         if self._release_dir is None:
-            release_dir_args = (datetime.utcnow().strftime('%Y%m%d-%H%M%S'), self._deployment_user, self._get_commit_hash())
+            release_dir_args = (
+                datetime.utcnow().strftime('%Y%m%d-%H%M%S'), self._deployment_user, self._get_commit_hash())
             self._release_dir = '%s-%s-%s' % release_dir_args
 
             if self._bundle_type == 'remote_jar':
@@ -300,7 +281,6 @@ class Mendel(object):
     def _is_already_built(self):
         return env._already_built or self._is_already_in_nexus()
 
-
     def _is_already_deployed(self):
         return env._already_deployed or self._is_already_in_nexus()
 
@@ -310,13 +290,9 @@ class Mendel(object):
                 if self._bundle_type == "tgz":
                     # Get most recently touched tarball
                     r = local('ls -1t *.tar.gz | head -1', capture=True)
-                elif self._bundle_type == "deb":
-                    r = local('ls *.deb', capture=True)
                 elif self._bundle_type == "jar":
                     r = local('ls %s.jar' % self._jar_name, capture=True)
                 elif self._bundle_type == "remote_jar":
-                    return None
-                elif self._bundle_type == "remote_deb":
                     return None
                 else:
                     raise Exception('Unsupported bundle type: %s' % self._bundle_type)
@@ -357,25 +333,6 @@ class Mendel(object):
 
         return curr_index
 
-    def _display_apt_versions_for_rollback_selection(self, releases, current):
-        """
-        displays releases with current release flagged, also returns index of
-        current release in release list
-        """
-        r_list, curr_index = [], None
-        for i, r in enumerate(releases):
-            release_string = ('%s %s' % (r.get('Version'), r.get('Filename', '').split('/')[-1]))
-            if current == r.get('Version'):
-                r_list.append(release_string + green(' <-- current'))
-                curr_index = i
-            else:
-                r_list.append(release_string)
-
-        for r in r_list:
-            print(r)
-
-        return curr_index
-
     def _is_running(self):
         result = self.service_wrapper('status', print_output=False, warn_only=False)
         return 'start/running' in result or 'active (running)' in result
@@ -395,42 +352,6 @@ class Mendel(object):
         with hide('stdout', 'running'):
             return run('ls -lt %s' % self._rpath('releases')).split('\n')[1].split()[-1]
 
-    def _dpkg_install_deb(self, fq_bundle_file):
-        with hide('stdout'):
-            sudo('dpkg --force-confold -i %s' % fq_bundle_file)
-
-    def _apt_install_remote_deb_latest(self):
-        print blue('upgrading package %s to latest available version' % self._service_name)
-        with hide('stdout'):
-            sudo('apt-get update')
-        sudo(
-            'apt-get install '
-            '-y '
-            '--force-yes '
-            '--only-upgrade '
-            '-o Dpkg::Options::="--force-confold" '
-            '%s'  % self._service_name
-        )
-
-    def _apt_install_remote_deb(self, version=None):
-        if not version:
-            self._apt_install_remote_deb_latest()
-
-        else:
-            print blue('installing %s %s ' % (self._service_name, version))
-            with hide('stdout'):
-                sudo('apt-get update')
-            sudo(
-                'apt-get install '
-                '-y '
-                '--force-yes '
-                '-o Dpkg::Options::="--force-confold" '
-                '%s=%s'  % (self._service_name, version)
-            )
-
-        jar_name = run('readlink %s.jar' % self._rpath("current", self._service_name))
-        print green('apt installed new jar: %s' % jar_name)
-
     def _install_tgz(self, bundle_file):
         release_dir = self._new_release_dir()
 
@@ -438,7 +359,8 @@ class Mendel(object):
             # so we can delete it after extraction
             sudo('chown %s:%s %s' % (self._user, self._group, bundle_file))
 
-            sudo('tar --strip-components 1 -zxvf %(bf)s && rm %(bf)s' % {'bf': bundle_file}, user=self._user, group=self._group)
+            sudo('tar --strip-components 1 -zxvf %(bf)s && rm %(bf)s' % {'bf': bundle_file}, user=self._user,
+                 group=self._group)
 
             if self._project_type == 'java':
                 sudo('ln -sf *.jar %s.jar' % self._service_name, user=self._user, group=self._group)
@@ -448,12 +370,13 @@ class Mendel(object):
                 # fabric commands are each issued in their own shell so the virtual env needs to be activated each time
                 # pip had issues with wheel cache permissions which were solved with the --no-cache flag
                 # the requires.txt is used instead of setup.py install because we don't need the code installed as a module
-                #   but we still need to the requirements installed, this way we dont have to find a requirements.txt file
-                #   in the rest of the application b/c setup.py sdist puts it in the egg-info
-                sudo('source /srv/{srv_name}/env/bin/activate && pip install --no-cache -r {rel_dir}/{srv_name}.egg-info/requires.txt'
+                # but we still need to the requirements installed, this way we dont have to find a requirements.txt file
+                # in the rest of the application b/c setup.py sdist puts it in the egg-info
+                sudo(
+                    'source /srv/{srv_name}/env/bin/activate && pip install --no-cache -r {rel_dir}/{srv_name}.egg-info/requires.txt'
                         .format(srv_name=self._service_name, rel_dir=self._rpath('releases', release_dir)),
-                        user=self._user,
-                        group=self._group)
+                    user=self._user,
+                    group=self._group)
                 # need to get the top level application directory but not the egg-info directory or other setup files
                 project_dir = sudo("find . -maxdepth 1 -mindepth 1 -type d -not -regex '.*egg-info$'")
                 project_dir = project_dir[2:]  # find command returns a string like './dir'
@@ -517,7 +440,6 @@ class Mendel(object):
             nexus_url = "http://" + nexus_url
         return nexus_url
 
-
     def _backup_current_release(self):
         """
 
@@ -530,20 +452,12 @@ class Mendel(object):
         current_release = self._rpath('releases', self._get_current_release()).rstrip('/')
 
         should_backup = \
-                '.old' not in current_release and \
-                not files.exists(current_release + '.old')
+            '.old' not in current_release and \
+            not files.exists(current_release + '.old')
 
         if should_backup:
             sudo('mv %(dir)s %(dir)s.old' % {'dir': current_release}, user=self._user, group=self._group)
             self._change_symlink_to("%s.old" % current_release)
-
-    def _install_deb(self, bundle_file):
-        self._backup_current_release()
-        self._dpkg_install_deb(self._tpath(bundle_file))
-        self.link_latest_release()
-
-    def _install_remote_deb(self, *ignored):
-        self._apt_install_remote_deb_latest()
 
     def _upload_tgz(self, bundle_file):
         """
@@ -556,25 +470,6 @@ class Mendel(object):
         put(fq_bundle_file, self._rpath('releases', release_dir), use_sudo=True)
 
         return release_dir
-
-    def _upload_deb(self, bundle_file):
-        """
-        upload a deb to /tmp,  return path
-        """
-        dest = self._tpath()
-        fq_bundle_file = self._lpath(self._build_target_path, bundle_file)
-        put(fq_bundle_file, dest)
-
-        return dest
-
-    def _upload_remote_deb(self, *ignored):
-        """
-        upload a deb to nexus
-        """
-        if self._project_type == "java":
-            local('mvn clean -U deploy')
-        else:
-            raise Exception("Unsupported project type: %s" % self._project_type)
 
     def _upload_remote_jar(self, jar_name):
 
@@ -637,103 +532,13 @@ class Mendel(object):
                 print green('successfully rolled back %s to %s' % (
                     self._service_name, rollback_to))
 
-    def _get_available_nexus_versions(self):
-        # validate nexus settings are configured first
-        for suffix in ('host', 'port', 'user', 'repository'):
-            if not getattr(self, '_nexus_%s' % suffix):
-                self._log_error_and_exit('~/.mendel.conf is missing %s in [nexus] configuration section' % suffix)
-
-        url_for_debug = (
-                'http://%(nexus_host)s:%(nexus_port)s'
-                '/nexus/content/repositories'
-                '/%(nexus_repository)s'
-                '/Packages' % dict(
-            nexus_host=self._nexus_host,
-            nexus_port=self._nexus_port,
-            nexus_repository=self._nexus_repository
-        ))
-
-        print blue('Downloading packages from %s' % url_for_debug)
-
-        #TODO maybe read password from maven settings?
-        nexus_password = os.environ.get('MENDEL_NEXUS_PASSWORD') or \
-                         getpass.getpass(prompt='Enter nexus password: ')
-
-        packages_file = requests.get(
-            'http://%(nexus_user)s:%(nexus_password)s'
-            '@%(nexus_host)s:%(nexus_port)s'
-            '/nexus/content/repositories'
-            '/%(nexus_repository)s'
-            '/Packages' % dict(
-                nexus_user=self._nexus_user,
-                nexus_password=nexus_password,
-                nexus_host=self._nexus_host,
-                nexus_port=self._nexus_port,
-                nexus_repository=self._nexus_repository
-            )
-        ).content
-
-        package_entries = [
-            deb822.Packages(package_info)
-            for package_info in packages_file.split('\n\n')
-            if package_info
-        ]
-
-        available_versions = [
-            p for p in package_entries
-            if p.get('Package') == self._service_name
-        ]
-
-        print blue('Found %s available versions of %s' % (len(package_entries), self._service_name))
-
-        return available_versions
-
-    def _get_current_package_version(self):
-        with hide('stdout'):
-            package_info = run('dpkg-query -s %s' % self._service_name)
-            pkg = deb822.Packages(package_info)
-            return pkg.get('Version')
-
-    def _apt_rollback(self):
-        def validator(rollback_candidate):
-            if rollback_candidate not in [v.get('Version') for v in available_versions]:
-                raise Exception('invalid rollback selection: %s' % rollback_candidate)
-            return rollback_candidate
-
-        with hide('status', 'running', 'stdout'):
-            available_versions = self._get_available_nexus_versions()
-            current_version = self._get_current_package_version()
-
-            curr_index = self._display_apt_versions_for_rollback_selection(
-                available_versions,
-                current_version
-            )
-
-            default_rollback_choice = available_versions[max(curr_index - 1, 0)]
-            rollback_to = prompt(
-                'Rollback to:',
-                default=default_rollback_choice.get('Version'),
-                validate=validator
-            )
-            self._apt_install_remote_deb(version=rollback_to)
-        self._track_event('rolledback')
-
     def _find_version(self, version):
         if version == '' or version is None:
             return
 
         if version == 'nexus.latest':
             print "Finding latest version from Nexus..."
-            elem_tree = ElementTree(file=os.path.join(self._cwd, "pom.xml"))
-            nexus_url = self._generate_base_nexus_url(elem_tree) + '/maven-metadata.xml'
-
-            print nexus_url
-
-            maven_meta = run('curl -s ' + str(nexus_url)) # For tests, needs to run on a client
-            print maven_meta
-            maven_meta_xml = fromstring(maven_meta)
-            versioning = maven_meta_xml.find("versioning")
-            self.project_version = versioning.findtext("latest") or versioning.findtext("release")
+            self.project_version = self._get_versions_from_nexus()[-1]
 
         else:
             self.project_version = version.strip()
@@ -745,6 +550,13 @@ class Mendel(object):
 
         print "Version was set to be %s." % self.project_version
 
+    def _get_versions_from_nexus(self):
+        elem_tree = ElementTree(file=os.path.join(self._cwd, "pom.xml"))
+        nexus_url = self._generate_base_nexus_url(elem_tree) + '/maven-metadata.xml'
+        maven_meta = requests.get(nexus_url).text
+        maven_meta_xml = fromstring(maven_meta)
+        versioning = maven_meta_xml.find("versioning")
+        return map(lambda x: x.text ,  versioning.find('versions').getchildren())
 
     ############################################################################
     # Deploy Tasks
@@ -763,19 +575,27 @@ class Mendel(object):
         """
         if not self._is_already_built():
             if self._project_version_specified:
-                raise Exception("User required version {} to be deployed, but it wasn't avaliable from remote source".format(self.project_version))
+                raise Exception(
+                    "User required version {} to be deployed, but it wasn't available from remote source".format(
+                        self.project_version))
             if self._project_type == "java":
                 local('mvn clean -U package')
             elif self._project_type == "python":
                 if self._bundle_type == "tgz":
                     local('python setup.py sdist')
                 else:
-                    raise Exception("Unsupported bundle type: {} for project type: {}".format(self._bundle_type, self._project_type))
+                    raise Exception("Unsupported bundle type: {} for project type: {}".format(self._bundle_type,
+                                                                                              self._project_type))
             else:
                 raise Exception("Unsupported project type: %s" % self._project_type)
             self._mark_as_built()
             self._track_event_slack('built')
 
+    def list_nexus_versions(self):
+        """
+        Prints a list of the versions of the detected jar available in nexus
+        """
+        print '\n'.join(self._get_versions_from_nexus())
 
     def link_latest_release(self):
         """
@@ -785,7 +605,6 @@ class Mendel(object):
             release_dir = self._get_latest_release()
         print green("Linking release %s into current" % magenta(release_dir))
         self._change_symlink_to(self._rpath('releases', release_dir))
-
 
     def upload(self):
         """
@@ -820,14 +639,10 @@ class Mendel(object):
             self._log_error_and_exit("error: you didnt specify any hosts with -H")
 
         self._find_version(version)
-
-        curl_output = run('curl -s -o /dev/null -w "%{http_code}" ' + str(self._graphite_host))
-
-        if curl_output.strip() == '200':
-            print green('Graphite host is present in mendel configuration and responsive')
-            print blue('Proceeding with deployment...')
-        else:
-            self._log_error_and_exit('Graphite host is not present in mendel configuration or is not responsive')
+        try:
+            requests.get(self._graphite_host).raise_for_status()
+        except:
+            self._log_error_and_exit('Graphite host %s is not present in mendel configuration or is not responsive' % self._graphite_host)
 
         self.build()
         self.upload()
@@ -853,7 +668,8 @@ class Mendel(object):
         with hide('status', 'running', 'stdout'):
             if print_output:
                 print blue('executing init:%s' % cmd)
-            out = sudo("SYSTEMD_PAGER='' service %s %s" % (self._service_name, cmd), warn_only=warn_only, quiet=not print_output)
+            out = sudo("SYSTEMD_PAGER='' service %s %s" % (self._service_name, cmd), warn_only=warn_only,
+                       quiet=not print_output)
             if print_output:
                 print green(out)
             return out
@@ -888,7 +704,8 @@ class Mendel(object):
         url = 'http://%s/events/' % self._graphite_host
 
         user = self._deployment_user
-        what = '%s %s %s version %s on host %s' % (user, event, self._service_name, self.project_version, env.host_string)
+        what = '%s %s %s version %s on host %s' % (
+            user, event, self._service_name, self.project_version, env.host_string)
         data = ''
         tags = [str(s) for s in (self._service_name, event)]
         post_data = {'what': what, 'tags': tags, 'data': data}
@@ -937,9 +754,14 @@ class Mendel(object):
         """
         if self._slack_url is not None:
             if failure:
-                text = "*DEPLOY FAILED FOR* %s %s @ %s, version *%s* to host(s) %s with error %s *ABORTING DEPLOY*" % (self._deployment_user, self._service_name, self._get_commit_hash(shorten=True), self.project_version, env.host_string, event)
+                text = "*DEPLOY FAILED FOR* %s %s @ %s, version *%s* to host(s) %s with error %s *ABORTING DEPLOY*" % (
+                    self._deployment_user, self._service_name, self._get_commit_hash(shorten=True),
+                    self.project_version,
+                    env.host_string, event)
             else:
-                text = "%s *%s* %s @ %s, version *%s* to host(s) %s" % (self._deployment_user, event.upper(), self._service_name, self._get_commit_hash(shorten=True), self.project_version, env.host_string)
+                text = "%s *%s* %s @ %s, version *%s* to host(s) %s" % (
+                    self._deployment_user, event.upper(), self._service_name, self._get_commit_hash(shorten=True),
+                    self.project_version, env.host_string)
             params = {
                 'username': 'Mendel',
                 'text': text,
@@ -949,7 +771,8 @@ class Mendel(object):
                 req = urllib2.Request(self._slack_url, json.dumps(params))
                 urllib2.urlopen(req)
             except Exception as e:
-                print red("Could not notify slack that a mendel event took place at url: %s with error %s" % (self._slack_url, e))
+                print red("Could not notify slack that a mendel event took place at url: %s with error %s" % (
+                    self._slack_url, e))
         else:
             print 'No slack_url found skipping slack notification'
 
@@ -965,6 +788,7 @@ class Mendel(object):
                 self.tail,
                 self.rollback,
                 self.service_wrapper,
-                self.link_latest_release
+                self.link_latest_release,
+                self.list_nexus_versions
             ]
         ]

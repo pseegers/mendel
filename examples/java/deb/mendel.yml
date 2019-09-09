@@ -1,9 +1,0 @@
-service_name: myservice
-service_root: /srv/myservice
-build_target_path: target/
-bundle_type: deb
-project_type: java
-hosts:
-  dev: 
-    hostnames: 127.0.0.1
-    port: 2222

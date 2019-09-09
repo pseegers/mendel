@@ -19,7 +19,6 @@
 """
 
 
-
 from mendel import fabfile
 import os
 from fabric import main

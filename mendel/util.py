@@ -54,6 +54,7 @@ def create_host_task(key, host_config):
     f.__doc__ = "[hosts] \tsets deploy hosts to %s" % green(host_config[hosts_key])
     return WrappedCallableTask(f)
 
+
 def lcd_task(task, cd_to):
     """
     wrap a function so that it will be
@@ -105,6 +106,7 @@ def load_mendel_config():
             red('%(fn)s not found or malformed. '
                 'To use the mendel cli, please '
                 'include service info in %(fn)s' % dict(fn=options.file)))
+
 
 def str_to_bool(val):
     """Convert a string representation of truth to true (1) or false (0).
