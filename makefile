@@ -1,4 +1,4 @@
-version = $(shell egrep -o "[0-9]+\.[0-9]+\.[0-9]+" mendel/version.py)
+version = $(shell egrep -o "[0-9]+\.[0-9]+\.[0-9]+[a-z]+[0-0]+" mendel/version.py)
 
 init:
 	pip install -r requirements.txt
@@ -13,9 +13,10 @@ release: test
 	# if tag fails, that means we're trying to build
 	# a version that already exists
 	git tag $(version)
-	python setup.py sdist upload -r sprout
+	python setup.py sdist
+	sudo twine upload --repository-url http://pypi.int.sproutsocial.com:7974 dist/*
 	# dont push tag til successfully uploaded to pypi
-	git push origin $(version)
+	# git push origin $(version)
 
 clean:
 	rm -rf ./dist/

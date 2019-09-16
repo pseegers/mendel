@@ -1,0 +1,9 @@
+service_name: hello-world
+bundle_type: remote_jar
+project_type: java
+slack_url: https://hooks.slack.com/services/a/b/c
+hosts:
+  prod:
+    hostnames: aws-1-3-4, aws-1-3-5
+  stage:
+    hostnames: dev-123

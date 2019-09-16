@@ -1,22 +1,18 @@
 import docker
-from fabric.colors import blue
-from fabric import state
+from mendel.util.colors import blue
+
 
 def initialize_heavyset():
     """
         This function starts up heavyset, which is an ubuntu 18.04 based container with
         systemd installed and test-fixtured config.
     """
-
-    state.env.user = 'vagrant'
-    state.env.password = 'vagrant'
-
     client = docker.from_env()
 
     http_port = '8081'
     ssh_port = '2223'
 
-    print blue("Setting your machine up to work with systemd container...")
+    print(blue("Setting your machine up to work with systemd container..."))
     client.containers.run(
         image='solita/ubuntu-systemd:18.04',
         command='setup',
@@ -25,14 +21,13 @@ def initialize_heavyset():
         remove=True
     )
 
-
-    print blue("Running ubuntu 18.04 based systemd container...")
+    print(blue("Running ubuntu 18.04 based systemd container..."))
     client.containers.run(
         image='ihamisu/heavyset:1.0.4',
         detach=True,
         name='stage-host',
         security_opt=['seccomp=unconfined'],
-        tmpfs= {
+        tmpfs={
             '/run': '',
             '/run/lock': ''
         },
@@ -43,5 +38,6 @@ def initialize_heavyset():
         }
     )
 
-if __name__== "__main__":
-  initialize_heavyset()
+
+if __name__ == "__main__":
+    initialize_heavyset()

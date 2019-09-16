@@ -9,20 +9,96 @@
  running `mendel <args>` is the equivalent of invoking
 
       fab -f /usr/local/lib/python/site-packages/mendel/fabfile.py <args>
-
- The fabfile is empty, but since it exists in a module,
- fabric will look for tasks in the whole module,
- and discover the tasks generated in `mendel/__init__.py`.
-
- This is a pretty dirty hack, but it seems to be the
- cleanest way to ship fabric tasks as a library.
 """
 
-
-from mendel import fabfile
+import argparse
 import os
-from fabric import main
+import sys
 
-fabfile_path = os.path.dirname(fabfile.__file__)
+from fabric.main import Config
+from fabric.main import Executor
+from fabric.main import Fab
+from fabric.main import fabric
+from invoke import Collection
+from invoke import Task as InvokeTask
+from paramiko.ssh_exception import BadHostKeyException
+from paramiko.ssh_exception import NoValidConnectionsError
+from paramiko.ssh_exception import SSHException
 
-main.main([fabfile_path])
+from mendel.config.init_config_task import init
+from mendel.config.service_config import ConfigMissingError
+from mendel.config.service_config import load_mendel_config
+from mendel.core import Mendel
+from mendel.tests.util import is_running_tests
+from mendel.util.colors import blue
+from mendel.util.colors import green
+from mendel.util.colors import magenta
+from mendel.util.colors import red
+
+mendel_task_collection = Collection()
+
+if not is_running_tests():
+    try:
+        # 1. Load Config
+        config, config_file = load_mendel_config()
+        mendel_yaml_abspath = os.path.abspath(config_file)
+        config.cwd = os.path.dirname(mendel_yaml_abspath)
+        print(blue('Using service config at %s' % magenta(mendel_yaml_abspath)))
+        print(blue('Setting working directory to %s' % magenta(config.cwd)))
+        for host_task in config.host_tasks:
+            mendel_task_collection.add_task(host_task)
+
+        # 2. Define target hosts
+        hosts = None
+        # Here, intercept hosts given at command line and reconcile with those in config
+        parser = argparse.ArgumentParser(add_help=False)
+        parser.add_argument('-H', '--hosts', default=None)
+        options, _ = parser.parse_known_args()
+        if options and options.hosts:
+            hosts = options.hosts
+
+        if not hosts:
+            for environment_name, environment in config.available_host_groups.items():
+                if environment_name in sys.argv:
+                    hosts = environment.to_connection_dicts()
+
+        if hosts:
+            # 3. Instantiate Mendel
+            print(blue(f"Using {hosts} as hosts"))
+            mendel = Mendel(config=config, hosts=hosts)
+
+            # 4. Add Available Tasks
+            for task in mendel.tasks:
+                mendel_task_collection.add_task(task)
+
+    except ConfigMissingError as e:
+        if any(arg.endswith('fab') for arg in sys.argv):
+            # mendel is being used as a lib for fab, so we don't need a config
+            pass
+        elif len(sys.argv) >= 2 and ('mendel' in sys.argv[0] and 'init' in sys.argv[1]):
+            # mendel is being used as tool to bootstrap a project, so we don't need a config
+            mendel_task_collection.add_task(InvokeTask(body=init))
+        else:
+            print(red(str(e)))
+            print()
+            print(green('if you\'re bootstrapping a project, use `mendel init`'))
+            sys.exit(1)
+    except Exception as e:
+        print(red(str(e)))
+        # don't let it continue and spit out the fabric usage
+        # stuff if we can't properly parse the mendel.yml
+        sys.exit(1)
+
+# 5. start Fabric with our task collection
+fab = Fab(
+    name="Fabric",
+    namespace=mendel_task_collection,
+    version=fabric,
+    executor_class=Executor,
+    config_class=Config
+)
+
+try:
+    fab.run()
+except (SSHException, BadHostKeyException, NoValidConnectionsError)  as e:
+    print(red(f"Unable to ssh into target hosts. Details: {e.__class__.__name__}: {str(e)}"))
