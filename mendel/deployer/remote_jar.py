@@ -3,12 +3,13 @@ Deploy a jar housed remotely (Nexus)
 """
 import datetime
 
+import requests
+
 from mendel.config.service_config import ServiceConfig
 from mendel.util.colors import blue
 from mendel.util.colors import green
 from .base import Deployer
 from .mixins.nexus import NexusMixin
-import requests
 from .mixins.rollback import SymlinkRollbackMixin
 
 

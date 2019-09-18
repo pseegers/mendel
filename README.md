@@ -189,6 +189,14 @@ Use `sprout_java` in Chef. In other words:
    `/srv/service-name/current`
 3. Make sure your service's logs are set to go to `/var/log/service-name/`, or make sure your log4j.properties file puts them into `/srv/service-name` or really anywhere besides in the root of your classpath because each deployment will move a symlink.
 
+
+Changelog
+---------------------------
+<h3> Mendel 3.0.0 </h3>
+Converts Mendel to use Fabric2 and runs using Python 3.6. Deprecates support for Python 2.7
+Client interface remains the same but using as a library, now requires instantiating a ServiceConfig object.
+
+
 Developing Mendel, Making changes
 ---------------------------
 Please make sure all tests pass and new tests are added to cover your additions.

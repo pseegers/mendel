@@ -301,12 +301,10 @@ class Deployer(object):
         but for most situations it should be adequate.
         :return: str release dir
         """
-        release_dir_args = (datetime.datetime.utcnow().strftime('%Y%m%d-%H%M%S'),
-                            self.config.deployment_user,
-                            self._get_commit_hash(connection))
-        release_dir = '%s-%s-%s' % release_dir_args
+        timestamp = datetime.datetime.utcnow().strftime('%Y%m%d-%H%M%S')
+        commit_hash = self._get_commit_hash(connection)
 
-        return release_dir
+        return f'{timestamp}-{self.config.deployment_user}-{commit_hash}'
 
     def _get_current_release(self, connection):
         """
