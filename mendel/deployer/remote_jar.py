@@ -74,12 +74,12 @@ class RemoteJarDeployer(Deployer, NexusMixin, SymlinkRollbackMixin):
                 return True
             else:
                 print(print(resp.content))
-                blue('Artifact not found in nexus. Building locally...')
+                print(blue(f'Artifact not found in nexus. Url checked: {nexus_url}'))
         return False
 
     def rollback(self, connection):
         """
-        Redirect to mixin.
+        [core]\t\tchoose a version to rollback to from all available releases
         """
         return self.symlink_rollback(connection)
 

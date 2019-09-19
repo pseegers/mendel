@@ -48,28 +48,12 @@ if not is_running_tests():
         for host_task in config.host_tasks:
             mendel_task_collection.add_task(host_task)
 
-        # 2. Define target hosts
-        hosts = None
-        # Here, intercept hosts given at command line and reconcile with those in config
-        parser = argparse.ArgumentParser(add_help=False)
-        parser.add_argument('-H', '--hosts', default=None)
-        options, _ = parser.parse_known_args()
-        if options and options.hosts:
-            hosts = options.hosts
+        # 2. Instantiate Mendel. Mendel figures out what hosts we're working with.
+        mendel = Mendel(config=config)
 
-        if not hosts:
-            for environment_name, environment in config.available_host_groups.items():
-                if environment_name in sys.argv:
-                    hosts = environment.to_connection_dicts()
-
-        if hosts:
-            # 3. Instantiate Mendel
-            print(blue(f"Using {hosts} as hosts"))
-            mendel = Mendel(config=config, hosts=hosts)
-
-            # 4. Add Available Tasks
-            for task in mendel.tasks:
-                mendel_task_collection.add_task(task)
+        # 3. Add Available Tasks
+        for task in mendel.tasks:
+            mendel_task_collection.add_task(task)
 
     except ConfigMissingError as e:
         if any(arg.endswith('fab') for arg in sys.argv):
@@ -89,7 +73,7 @@ if not is_running_tests():
         # stuff if we can't properly parse the mendel.yml
         sys.exit(1)
 
-# 5. start Fabric with our task collection
+# 4. start Fabric with our task collection
 fab = Fab(
     name="Fabric",
     namespace=mendel_task_collection,

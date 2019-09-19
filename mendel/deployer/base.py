@@ -285,9 +285,9 @@ class Deployer(object):
         :return: str commit hash, ex. `f333c776c8cf9d56a4604ff29640326f50f00c19`
         """
         if shorten:
-            result = connection.local('git rev-parse --short=7 HEAD', hide='stdout')
+            result = connection.local('git rev-parse --short=7 HEAD', hide='stdout', warn=True)
         else:
-            result = connection.local('git rev-parse HEAD', hide='stdout')
+            result = connection.local('git rev-parse HEAD', hide='stdout', warn=True)
 
         if result.failed or result.stdout.strip() == '':
             self._log_error_and_exit(connection, "failed to obtain commit hash")

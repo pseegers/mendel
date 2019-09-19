@@ -29,34 +29,36 @@ class ServiceConfig(GlobalConfig):
     DEFAULT_PROJECT_TYPE = "java"
     DEFAULT_VERSION_CONTROL = "git"
 
-    def __init__(self, service_name=None):
+    def __init__(self, **kwargs):
         """
         House default config attributes not overridden by service config
         :param service_name: str service name
         """
         super().__init__()
-        self.service_name = service_name
-        self.api_service_name = None
-        self.service_root = None
-        self.build_target_path = None
-        self.user = None
-        self.deployment_user = self.GLOBAL_DEPLOYMENT_USER or getpass.getuser()
-        self.group = None
-        self.bundle_type = self.DEFAULT_BUNDLE_TYPE
-        self.project_type = self.DEFAULT_PROJECT_TYPE
-        self.cwd = self.DEFAULT_CWD
-        self.jar_name = None
-        self.classifier = None
-        self.version_control = self.DEFAULT_VERSION_CONTROL
-        self.nexus_user = self.GLOBAL_NEXUS_USER
-        self.nexus_host = self.GLOBAL_NEXUS_HOST
-        self.nexus_port = self.GLOBAL_NEXUS_PORT
-        self.nexus_repository = self.GLOBAL_NEXUS_REPOSITORY
-        self.graphite_host = self.GLOBAL_GRAPHITE_HOST
-        self.slack_url = None
-        self.slack_emoji = self.DEFAULT_SLACK_EMOJI
-        self.track_event_endpoint = self.GLOBAL_TRACK_EVENT_ENDPOINT
-        self.host_configs = []
+        self.service_name = kwargs.get('service_name')
+        self.api_service_name = kwargs.get('api_service_name') or self.service_name
+        self.service_root = kwargs.get('service_root') or os.path.join('/srv', self.service_name)
+        self.build_target_path = kwargs.get('build_target_path') or 'target/' + self.service_name
+        self.user = kwargs.get('user') or self.service_name
+        self.deployment_user = kwargs.get('deployment_user') or self.GLOBAL_DEPLOYMENT_USER or getpass.getuser()
+        self.group = kwargs.get('group') or self.user or self.service_name
+        self.bundle_type = kwargs.get('bundle_type') or self.DEFAULT_BUNDLE_TYPE
+        self.project_type = kwargs.get('project_type') or self.DEFAULT_PROJECT_TYPE
+        self.cwd = kwargs.get('cwd') or self.DEFAULT_CWD
+        self.jar_name = kwargs.get('jar_name') or self.service_name
+        self.classifier = kwargs.get('classifier')
+        self.version_control = kwargs.get('version_control') or self.DEFAULT_VERSION_CONTROL
+        self.nexus_user = kwargs.get('nexus_user') or self.GLOBAL_NEXUS_USER
+        self.nexus_host = kwargs.get('nexus_host') or self.GLOBAL_NEXUS_HOST
+        self.nexus_port = kwargs.get('nexus_port') or self.GLOBAL_NEXUS_PORT
+        self.nexus_repository = kwargs.get('nexus_repository') or self.GLOBAL_NEXUS_REPOSITORY
+        self.graphite_host = kwargs.get('graphite_host') or self.GLOBAL_GRAPHITE_HOST
+        self.slack_url = kwargs.get('slack_url')
+        self.slack_emoji = kwargs.get('slack_emoji') or self.DEFAULT_SLACK_EMOJI
+        self.track_event_endpoint = kwargs.get('track_event_endpoint') or self.GLOBAL_TRACK_EVENT_ENDPOINT
+        self.host_configs = kwargs.get('host_configs') or []
+        self.use_init = False
+        self.use_upstart = True
 
     @classmethod
     def from_dict(cls, dict_config: dict):
@@ -209,3 +211,8 @@ class HostConfig(object):
         for host in self.hosts:
             connections.append(dict(host=host, port=self.port))
         return connections
+
+    def to_fab_task(self):
+        def f(c): return None
+        f.__name__ = self.name
+        return Task(body=f)
