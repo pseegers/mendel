@@ -66,10 +66,9 @@ class NexusMixinTests(TestCase):
 class SymlinkRollbackMixinTests(TestCase):
     def setUp(self) -> None:
         super().setUp()
-        mock_config = ServiceConfig()
-        mock_config.deployment_user = 'kevin'
-        mock_config.service_name = 'test_service'
-        mock_config.service_root = '/srv/'
+        mock_config = ServiceConfig(service_name='test_service',
+                                    service_root='/srv/',
+                                    deployment_user='kevin')
         self.deployer = RemoteJarDeployer(config=mock_config)
 
     def test_get_all_releases(self):

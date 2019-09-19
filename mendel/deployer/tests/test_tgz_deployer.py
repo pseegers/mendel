@@ -17,15 +17,14 @@ class BaseDeployerDeployTests(TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        mock_config = ServiceConfig()
-        mock_config.slack_url = 'slack.com/aaa'
-        mock_config.slack_emoji = ':alert:'
-        mock_config.deployment_user = 'kevin'
-        mock_config.service_name = 'test_service'
-        mock_config.service_root = '/srv/'
-        mock_config.graphite_host = 'int.graphite.com'
-        mock_config.track_event_endpoint = 'endpoint.com'
-        mock_config.build_target_path = '/target/test_service'
+        mock_config = ServiceConfig(service_name='test_service',
+                                    service_root='/srv/',
+                                    slack_url='slack.com/aaa',
+                                    slack_emoji=':alert:',
+                                    deployment_user='kevin',
+                                    graphite_host='int.graphite.com',
+                                    track_event_endpoint='endpoint.com',
+                                    build_target_path='/target/test_service')
         self.deployer = TarballDeployer(config=mock_config)
 
     def test_get_bundle_name(self):

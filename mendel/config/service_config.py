@@ -37,8 +37,12 @@ class ServiceConfig(GlobalConfig):
         super().__init__()
         self.service_name = kwargs.get('service_name')
         self.api_service_name = kwargs.get('api_service_name') or self.service_name
-        self.service_root = kwargs.get('service_root') or os.path.join('/srv', self.service_name)
-        self.build_target_path = kwargs.get('build_target_path') or 'target/' + self.service_name
+        if self.service_name:
+            self.service_root = kwargs.get('service_root') or os.path.join('/srv', self.service_name)
+            self.build_target_path = kwargs.get('build_target_path') or 'target/' + self.service_name
+        else:
+            self.service_root = kwargs.get('service_root')
+            self.build_target_path = kwargs.get('build_target_path')
         self.user = kwargs.get('user') or self.service_name
         self.deployment_user = kwargs.get('deployment_user') or self.GLOBAL_DEPLOYMENT_USER or getpass.getuser()
         self.group = kwargs.get('group') or self.user or self.service_name

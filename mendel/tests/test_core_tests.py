@@ -13,11 +13,10 @@ class MendelCoreTests(TestCase):
         super().setUp()
         self.expected_tasks = {'link_latest_release', 'build', 'upload',
                                'install', 'deploy', 'rollback', 'tail', 'service_wrapper'}
-        self.mock_config = ServiceConfig()
-        self.mock_config.slack_url = 'slack.com/aaa'
-        self.mock_config.slack_emoji = ':alert:'
-        self.mock_config.deployment_user = 'kevin'
-        self.mock_config.service_name = 'test_service'
+        self.mock_config = ServiceConfig(service_name='test_service',
+                                         slack_url='slack.com/aaa',
+                                         slack_emoji=':alert:',
+                                         deployment_user='kevin')
 
     def test_remote_jar_tasks(self):
         self.mock_config.bundle_type = 'remote_jar'

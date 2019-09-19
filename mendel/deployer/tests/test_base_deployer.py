@@ -18,14 +18,13 @@ class BaseDeployerTests(TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        mock_config = ServiceConfig()
-        mock_config.slack_url = 'slack.com/aaa'
-        mock_config.slack_emoji = ':alert:'
-        mock_config.deployment_user = 'kevin'
-        mock_config.service_name = 'test_service'
-        mock_config.service_root = '/srv/'
-        mock_config.graphite_host = 'int.graphite.com'
-        mock_config.track_event_endpoint = 'endpoint.com'
+        mock_config = ServiceConfig(service_name='test_service',
+                                    slack_url='slack.com/aaa',
+                                    slack_emoji=':alert:',
+                                    deployment_user='kevin',
+                                    service_root='/srv/',
+                                    graphite_host='int.graphite.com',
+                                    track_event_endpoint='endpoint.com')
         self.deployer = Deployer(config=mock_config)
 
     def test_git_commit_hash(self):
@@ -145,14 +144,13 @@ class BaseDeployerDeployTests(TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        mock_config = ServiceConfig()
-        mock_config.slack_url = 'slack.com/aaa'
-        mock_config.slack_emoji = ':alert:'
-        mock_config.deployment_user = 'kevin'
-        mock_config.service_name = 'test_service'
-        mock_config.service_root = '/srv/'
-        mock_config.graphite_host = 'int.graphite.com'
-        mock_config.track_event_endpoint = 'endpoint.com'
+        mock_config = ServiceConfig(slack_url='slack.com/aaa',
+                                    slack_emoji='alert:',
+                                    deployment_user='kevin',
+                                    service_name='test_service',
+                                    service_root='/srv/',
+                                    graphite_host='int.graphite.com',
+                                    track_event_endpoint='endpoint.com')
         self.deployer = Deployer(config=mock_config)
 
     @patch('mendel.deployer.base.Deployer._track_event')
