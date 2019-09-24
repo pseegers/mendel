@@ -206,7 +206,7 @@ class Deployer(object):
         :param connection: Connection
         :return: bool whether service is running
         """
-        result = self.service_wrapper(connection, 'status', print_output=False, warn_only=False)
+        result = self.service_wrapper(connection, 'status', print_output=True, warn_only=False)
         return 'start/running' in result or 'active (running)' in result
 
     def _lpath(self, *args):

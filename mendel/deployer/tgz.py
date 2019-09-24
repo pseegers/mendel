@@ -65,6 +65,12 @@ class TarballDeployer(Deployer, SymlinkRollbackMixin):
 
         return self.release_dir
 
+    def rollback(self, connection):
+        """
+        [core]\t\tchoose a version to rollback to from all available releases
+        """
+        return self.symlink_rollback(connection)
+
     def _get_bundle_name(self, connection):
         build_path = self._lpath(self.config.build_target_path)
         try:

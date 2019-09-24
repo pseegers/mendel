@@ -78,7 +78,7 @@ class Mendel(object):
         if self.hosts:
             # 3. Instantiate Mendel
             print(blue(f"Using {self.hosts} as hosts"))
-        elif any(arg.endswith('fab') for arg in sys.argv):
+        elif any(arg.endswith('fab') for arg in sys.argv) or '-l' in sys.argv or '--help' in sys.argv:
             # mendel is being used as a lib for fab, so we don't need to complain about hosts, fab will
             pass
         else:

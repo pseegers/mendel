@@ -9,7 +9,7 @@ from .base import Deployer
 from .mixins.rollback import SymlinkRollbackMixin
 
 
-class DebDeployer(Deployer, SymlinkRollbackMixin):
+class DebDeployer(Deployer):
     def __init__(self, service_name, config):
         super().__init__(service_name, config)
 
