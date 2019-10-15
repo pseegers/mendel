@@ -108,6 +108,9 @@ class ServiceConfig(GlobalConfig):
                 print(red("DEPRECATION WARNING: use_upstart must be changed to use_init."))
                 config.use_init = True
                 config.use_upstart = False
+            elif use_upstart is None:
+                # If use_init is explicitly False and use_upstart is unset, disable upstart
+                config.use_upstart = False
             else:
                 config.use_init = False
                 config.use_upstart = True
